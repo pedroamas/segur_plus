@@ -1,0 +1,67 @@
+spring:
+  application:
+    name: segurplus-backend
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5434/${POSTGRES_DB:segurplus}}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc.time_zone: UTC
+  flyway:
+    enabled: true
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 11MB
+  mvc:
+    problemdetails:
+      enabled: true
+    log-request-details: false
+
+server:
+  port: 8100
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
+
+logging:
+  pattern:
+    level: "%5p [%X{correlationId:-}]"
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+segurplus:
+  clock:
+    mode: FIXED                 # FIXED | SYSTEM (ADR 0006)
+    fixed-date: ${APP_CLOCK_FIXED_DATE:2027-01-15}
+    zone: Europe/Madrid
+  auth:
+    jwt-secret: ${JWT_SECRET}   # >= 32 bytes; solo en el entorno
+    issuer: segurplus
+    access-token-ttl: PT10M     # 10-15 min (ADR 0007)
+    refresh-token-ttl: P7D
+    bcrypt-strength: 10
+  storage:
+    endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+    access-key: ${MINIO_ROOT_USER}
+    secret-key: ${MINIO_ROOT_PASSWORD}
+    bucket: segurplus-documents
+  documents:
+    max-upload-bytes: 10485760
+    preview:
+      max-sheets: 5
+      max-rows: 200
+      max-columns: 30
+      max-cell-chars: 500
+  seed:
+    enabled: false              # solo desarrollo: usuarios y documentos de prueba (ver backend/README.md)
