@@ -21,7 +21,7 @@ sequenceDiagram
   participant D as Dify
 
   U->>DOC: subir fichero (multipart)
-  DOC->>DOC: validar MIME real, tamaño y extensión; calcular SHA-256
+  DOC->>DOC: validar MIME real, tamaño y extensión, calcular SHA-256
   DOC->>M: PUT objeto inmutable documents/docId/vN/sha256
   DOC->>PG: INSERT documents + document_versions (scan PENDING, index PENDING) + grants iniciales + outbox
   DOC->>DOC: escaneo antivirus de la versión

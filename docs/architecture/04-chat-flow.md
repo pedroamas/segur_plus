@@ -19,7 +19,7 @@ sequenceDiagram
   O->>P: construir AssistantContext {kbIds, metadataFilter, tools, promptVars}
   O->>D: planificar herramientas (app planner, salida JSON estricta)
   D-->>O: plan {rag?, sql tools + parámetros tipados}
-  O->>O: validar plan contra ai_tools y esquemas; descartar lo no permitido
+  O->>O: validar plan contra ai_tools y esquemas, descartar lo no permitido
   par RAG
     O->>D: Knowledge API retrieve con filtro de metadatos
     D-->>O: fragmentos candidatos
