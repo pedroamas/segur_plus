@@ -1,0 +1,88 @@
+# Decisiones de simplificación
+
+Rama `simple`, creada desde `f0-diseno` (que queda intacta como referencia). El propietario pidió «la app lo más simple posible»: el proyecto es un portfolio de **seguridad/autorización y RAG con permisos**, y el resto debe ser mínimo.
+
+## Qué se recortó
+| Área | Antes (F0) | Ahora | Por qué |
+|---|---|---|---|
+| Tablas | 54 | **11**: `users`, `customers`, `policies`, `commissions`, `invoices`, `expenses`, `sales_targets`, `documents`, `conversations`, `messages`, `audit_logs` | El valor del portfolio no está en un modelo de CRM, RR. HH. y contabilidad completos |
+| Usuarios y roles | users, roles, permissions, user_roles, role_permissions, employees, departments | Una tabla `users` con `role` (enum), `department`, `employee_code` y `monthly_salary` | 4 roles fijos |
+| Ventas | leads, oportunidades, ventas, actividades, coberturas, renovaciones, cancelaciones | **La venta es la póliza** (`policies`); cancelación y renovación como columnas; comisión del asegurador como columnas | Menos entidades con los mismos números ancla |
+| Finanzas | asientos, líneas, plan de cuentas, pagos | `invoices` y `expenses`; enlace contable = columna `ledger_account` | |
+| RR. HH. | contratos, nóminas, evaluaciones, ausencias | Contratos y nóminas **solo como documentos** generados desde `users` | |
+| Documentos | versiones, categorías, clasificaciones, KBs, grants | Una tabla `documents` con `allowed_roles[]`, `owner_id`, clasificación como enum | |
+| Permisos | tabla de grants + clearance + contexto | `rol ∈ allowed_roles` o propietario; solo MANAGER escribe ([ADR 0002](adr/0002-abac-access-policy-service.md)) | Regla de una línea, oráculo de tests simple |
+| IA | 4 asistentes en BD, 9 KBs, precios, evaluaciones en tablas | **1 asistente** (perfil YAML), **4 KBs**, sin precios, evaluación en ficheros | A6 reformulado |
+| Herramientas | 10 | **4** + `search_documents` ([ADR 0005](adr/0005-herramientas-tipadas.md)) | |
+| Backend | 14 módulos con Spring Modulith | **5 paquetes** + `shared` ([ADR 0001](adr/0001-paquetes-por-funcionalidad.md)) | |
+| Frontend | 8+ pantallas | Login, Documentos, Chat, Dashboard sencillo | |
+| Fases | 10 | **5** (F1-F5) | |
+| Criterios de aceptación | 11 | **8** | |
+| Operación | outbox, reconciliación, particionado de auditoría, triggers, `EXCLUDE`, refresh con rotación, antivirus, circuit breaker, cuota diaria | Fuera del diseño base (mejoras opcionales) | |
+
+**No se tocó (núcleo de seguridad):** identidad solo del JWT; un único `AccessPolicyService` con deny by default; 404 y listados filtrados en la consulta; re-autorización de cada fragmento antes del LLM; sin SQL libre y `employee_id` nunca como parámetro; auditoría; batería de acceso cruzado; clave de Dify solo en backend; MinIO privado vía backend. Tampoco cambian el stack, A1, A2, los 7 usuarios, los 29+3 documentos ni los números ancla de octubre.
+
+## Consecuencias del recorte a tener presentes
+- **READ y DOWNLOAD van unidos.** SALES_MANAGER pasa a poder *descargar* D11 y la actividad comercial (D15, D18, D21, D24), que antes eran solo lectura. El visor ya entrega el fichero completo, así que no era una barrera técnica.
+- **Sin herramienta de gastos ni facturas.** Esas preguntas se responden desde los documentos D07, D12 y D13 (RAG), no desde la BD.
+- **Un único dataset de empleados en Dify.** El aislamiento entre empleados lo garantiza la re-autorización; el filtro `owner_id` en Dify solo mejora el recall (ADR 0003).
+- **Sin revocación por usuario individual ni caducidad**: solo por rol y propietario.
+- **JWT sin refresh**: sesión corta, nuevo login al expirar.
+- **El caso de prueba «COM001 no descarga D15»** desaparece (consecuencia de unir READ y DOWNLOAD).
+
+## Hallazgos de F0 (H-01 … H-33)
+El fichero `F0-hallazgos.md` se retira de esta rama (sigue en `f0-diseno`). Estado de cada hallazgo tras el recorte:
+
+| ID | Tema | Estado | Cómo queda |
+|---|---|---|---|
+| H-01 | IDs de actividad comercial | Resuelto | D15, D18, D21, D24; `SALES_MANAGER` en su `allowed_roles` |
+| H-02 | 12 pólizas en octubre frente a 150-300 en total | **Pendiente** (baja) | Propuesta: los 150-300 incluyen cartera previa; se fija en F2 |
+| H-03 | Clearance del sujeto | Descartado por el recorte | No hay clearance |
+| H-04 | Alcance de la regla de propietario | Resuelto | Propietario ⇒ READ/DOWNLOAD (`owner_id`) |
+| H-05 | CREATE/UPDATE/DELETE/ADMINISTER | Resuelto | Solo MANAGER |
+| H-06 | D11 para COM001 y su asistente | Resuelto | KB-Finanzas en su perfil y `SALES_MANAGER` en `allowed_roles` de D11 |
+| H-07 | Actividad comercial en KB-EMPxxx | Resuelto | KB-Empleados única; acceso por `allowed_roles` |
+| H-08 | READ sin DOWNLOAD frente al visor | Resuelto con consecuencia | Se unen READ y DOWNLOAD (ver pendientes) |
+| H-09 | «Vistas con alcance» | Resuelto | El alcance se aplica en Java (`data`); ninguna vista |
+| H-10 | Quién propone las herramientas | Resuelto | Llamada de planificación validada por el backend (ADR 0003) |
+| H-11 | Verificación frente a streaming | Resuelto | Streaming real y evento final `verification` como señal de calidad (el LLM solo ve texto autorizado) |
+| H-12 | `NUMERIC(14,2)` y costes de IA | Descartado por el recorte | No hay precios; `NUMERIC(14,2)` en todo |
+| H-13 | Contenido del chat y revocaciones | **Pendiente** (baja) | El contenido solo vive en `messages` (propietario únicamente). Falta decidir retención; un texto ya generado no se «des-dice» si se revoca después un documento (las fuentes se re-autorizan al releer) |
+| H-14 | Catálogo de herramientas | Resuelto por el recorte | 4 herramientas; ver pendientes (`get_expenses`) |
+| H-15 | Permisos de datos y conversaciones ajenas | Resuelto | Alcance por herramienta; conversaciones solo del propietario (ni MANAGER) |
+| H-16 | 7.250 € ¿base o con IVA? | **Pendiente** (baja) | Se aplica a `expenses.total_amount` (IVA 0 en el seed); confirmar |
+| H-17 | Factura→operación en un corredor | Resuelto | `invoices` emitidas (a la aseguradora) y recibidas (proveedores) |
+| H-18 | Imperfecciones deliberadas | **Pendiente** (F2) | Se fijan en el generador, dentro del modelo de permisos |
+| H-19 | Dos relojes | Resuelto de otro modo | Un `Clock` inyectable; el JWT usa tiempo real (ADR 0006) |
+| H-20 | A1: el mes sale en pérdidas | **Pendiente** (informativo) | Con 9.680 € de primas los ingresos del asegurador (≈1.452 € al 15 %) no cubren los gastos; el informe D01/D13 debe ser coherente con ello |
+| H-21 | Varios roles por usuario | Descartado | Un rol por usuario (enum) |
+| H-22 | API de Dify 1.18 no verificada | **Pendiente** (F3) | Se comprueba en el Swagger de la instancia; plan B en ADR 0003 |
+| H-23 | Umbrales de contexto | Descartado | No hay reglas de contexto |
+| H-24 | KB-Sales con un solo documento | Descartado | No existe KB-Sales (D06 en KB-Direccion) |
+| H-25 | Grants inertes | Descartado | No hay grants |
+| H-26 | Fuentes de los empleados | Resuelto | KB-General y KB-Empleados (filtro `owner_id`) |
+| H-27 | Nómina propia por IA/SQL | Resuelto | Sin herramienta de nóminas; el propietario la lee del documento (RAG/descarga) |
+| H-28 | §18 original truncado | Informativo | Los puntos 5-8 del modo de trabajo están inferidos; sin impacto |
+| H-29 | Modulith o ArchUnit | Resuelto | Sin Modulith; ArchUnit opcional (ADR 0001) |
+| H-30 | `/api/chat` frente a `/api/v1` | Resuelto | `POST /api/v1/chat` |
+| H-31 | Cancelaciones y ventas | Resuelto | Ventas por `sale_date` sin importar el estado actual; la cancelación genera una comisión `CLAWBACK` en su mes |
+| H-32 | Desnormalizaciones de documentos | Descartado | No existen `knowledge_bases` ni `document_versions` |
+| H-33 | Tarifas de IA | Descartado | No hay precios |
+
+## Pendientes para el propietario
+1. **READ y DOWNLOAD unidos**: ¿se acepta que COM001 descargue D11 y la actividad comercial? Si no, habría que añadir una columna `download_roles` o una excepción en la regla.
+2. **Gastos y facturas por chat**: ¿suficiente con los documentos (RAG) o se añade una quinta herramienta `get_expenses`? (Cambia el alcance aprobado de 4 herramientas, por eso no se ha hecho.)
+3. **Escala del dataset (H-02)**: ¿150-300 pólizas incluyen cartera previa o son altas? Afecta a objetivos y A4.
+4. **Retención del historial de chat (H-13)** y **base o total del gasto (H-16)**: confirmar o aplazar.
+5. **JWT sin refresh**: ¿vale una sesión corta con nuevo login, o se quiere refresh con rotación (mejora opcional)?
+
+## Validaciones
+Realizadas el 2026-11-05 con scripts auxiliares no versionados (en el espacio de trabajo de la tarea, no en el repo):
+- **DDL** ([schema.md](data-model/schema.md)) en un PostgreSQL 16 temporal (initdb propio, sin tocar clústeres existentes, eliminado al terminar): 28 sentencias, **11 tablas**, 17 `CREATE INDEX` explícitos (40 índices en total con PK y UNIQUE) y 56 CHECK creados sin errores.
+- **Números ancla de octubre** con datos de prueba: 12 pólizas, 9.680,00 € de primas, 968,00 € de comisiones de empleado (`kind = 'ACCRUAL'`), 7.250,00 € de gastos, 12.000,00 € de objetivos, cumplimientos 105,0 / 76,0 / 73,2 / 68,8 % y 80,7 % total, por empleado 3.150 / 2.280 / 2.050 / 2.200 €. Una póliza de septiembre cancelada en octubre (con su `CLAWBACK`) no altera esas cifras.
+- **14 restricciones negativas** rechazadas por la BD: documento sin MANAGER, `RESTRICTED` con EMPLOYEE, KB-Empleados con EMPLOYEE o sin propietario, rol inexistente, `INDEXED` sin id de Dify, comisión de empleado y del asegurador mal calculadas, `CANCELLED` sin fecha, gasto `PAYROLL`, periodo no mensual, rol de usuario inválido, total de gasto incoherente, `sources` que no es array.
+- **Matriz**: se sembraron los 32 documentos desde [permissions-spec.yaml](data-model/permissions-spec.yaml) y la consulta `rol = ANY(allowed_roles) OR owner_id = usuario` dio **0 diferencias** con el oráculo Python (DIR001 32 documentos, ACC001 14, COM001 13, cada EMPLOYEE 10; 99 celdas READ permitidas de 224). **42** casos negativos explícitos dan DENY; las 36 combinaciones EMP↔EMP, ACC→Dirección y contratos/nóminas, COM→D01-D05 y contratos/nóminas, y EMP→Dirección/Finanzas dan DENY; los positivos de COM001 (D06, D11, D15, D18, D21, D24) dan ALLOW.
+- **Mermaid**: `mermaid_check.py` sobre `docs/`: **11 de 11 bloques OK** (tras corregir un `;` en un mensaje de secuencia).
+- **Enlaces internos** (incluidas anclas) comprobados con un script: sin rotos. Búsqueda de términos obsoletos (54 tablas, 9 KBs, Modulith, grants, F6-F9, H-xx): solo aparecen como histórico explícito («reemplaza…», «versión F0») o en esta página.
+
+**No verificado:** la API real de Dify 1.18 (filtros de metadatos, `retrieve`); las conversaciones ajenas y el alcance `OWN/TEAM` de las herramientas (se definen en el diseño, se probarán con el código en F1-F3); rendimiento con volumen; recall y citas (no existe aún el conjunto de evaluación); la sintaxis Mermaid se comprobó con el parser de Mermaid 11 vía navegador headless, no con el visor de GitHub.
