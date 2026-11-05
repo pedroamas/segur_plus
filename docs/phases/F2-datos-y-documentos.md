@@ -3,7 +3,7 @@
 **Objetivo:** un dataset coherente por construcción (la BD es la fuente de verdad) y los 32 documentos generados desde ella.
 
 **Entregables**
-- Carpeta `generator/`: semilla fija; genera `users` (7, con salario mensual), clientes, pólizas (la venta es la póliza; septiembre-diciembre 2026), comisiones, facturas, gastos y objetivos. Mes ancla octubre de 2026 con los números del brief.
+- Carpeta `generator/`: semilla fija; genera `users` (7, con salario mensual), clientes, pólizas (la venta es la póliza; **150-300 altas nuevas** de septiembre a diciembre de 2026, sin cartera previa; cancelaciones y renovaciones solo de esas pólizas), comisiones, facturas, gastos y objetivos. Mes ancla octubre de 2026 con los números del brief.
 - Generador de los **29 documentos** (PDF, XLSX, CSV, JSON) + 3 generales desde la BD; contratos y nóminas se generan **desde `users`** (no hay tablas de RR. HH.); `allowed_roles` y `owner_id` salen de `permissions-spec.yaml`.
 - Imperfecciones deliberadas y declaradas (partidas sin conciliar, dos versiones de un informe como documentos distintos, diferencia de redondeo, par de documentos casi idéntico con distinta clasificación) siempre dentro del modelo de permisos.
 - Seed: carga la BD y sube los ficheros a MinIO con checksum; comando de administración reproducible.

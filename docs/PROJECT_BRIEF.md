@@ -77,7 +77,7 @@ React + TS  →  Spring Boot (5 paquetes)  →  PostgreSQL (12 tablas: usuarios 
 
 ## 6. Datos coherentes
 - **PostgreSQL es la fuente de verdad.** Un generador determinista (semilla fija) produce los 29 documentos (PDF, XLSX, CSV, JSON) y 3 generales desde la BD. Contratos y nóminas se generan desde `users` (con su salario mensual); no hay tablas de RR. HH.
-- **Mes ancla: octubre de 2026.** Septiembre, noviembre y diciembre se generan alrededor (altas, renovaciones y cancelaciones).
+- **Mes ancla: octubre de 2026.** Septiembre, noviembre y diciembre se generan alrededor con estacionalidad. El total son **150-300 altas nuevas** de septiembre a diciembre de 2026 (no existe cartera previa a septiembre); las cancelaciones y renovaciones solo afectan a pólizas vendidas en ese periodo.
 
 | Empleado | Ventas | Primas | Comisión 10 % | Objetivo | Cumplimiento |
 |---|---:|---:|---:|---:|---:|

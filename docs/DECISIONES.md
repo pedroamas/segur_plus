@@ -38,7 +38,7 @@ El fichero `F0-hallazgos.md` se retira de esta rama (sigue en `f0-diseno`). Esta
 | ID | Tema | Estado | Cómo queda |
 |---|---|---|---|
 | H-01 | IDs de actividad comercial | Resuelto | D15, D18, D21, D24; `SALES_MANAGER` en su `allowed_roles` |
-| H-02 | 12 pólizas en octubre frente a 150-300 en total | **PENDIENTE** (el propietario aún no lo ha aclarado) | Sin tocar. Propuesta no aplicada: los 150-300 incluyen cartera previa |
+| H-02 | 12 pólizas en octubre frente a 150-300 en total | **RESUELTO** (propietario, 2026-11-05) | Las 150-300 pólizas son **altas nuevas entre septiembre y diciembre de 2026**, sin cartera previa. Octubre = mes ancla con 12 altas; las cancelaciones y renovaciones solo afectan a pólizas vendidas en ese periodo. Los objetivos de octubre (A4) no cambian |
 | H-03 | Clearance del sujeto | Descartado por el recorte | No hay clearance |
 | H-04 | Alcance de la regla de propietario | Resuelto | Propietario ⇒ READ/DOWNLOAD (`owner_id`) |
 | H-05 | CREATE/UPDATE/DELETE/ADMINISTER | Resuelto | Solo MANAGER |
@@ -79,7 +79,7 @@ El fichero `F0-hallazgos.md` se retira de esta rama (sigue en `f0-diseno`). Esta
 5. **JWT con refresh token**: confirmado, con rotación y revocación de la familia ante reutilización ([ADR 0007](adr/0007-sesiones-jwt-refresh-rotativo.md)).
 
 ## Pendientes para el propietario
-1. **Escala del dataset (H-02)**: ¿150-300 pólizas incluyen cartera previa o son altas? Sin resolver; afecta a objetivos y A4. Se fija en F2 cuando el propietario lo aclare.
+Ninguno: todos los pendientes están resueltos (H-02 incluido: 150-300 altas nuevas de septiembre a diciembre de 2026).
 
 ## Validaciones
 Realizadas con scripts auxiliares no versionados (en el espacio de trabajo de la tarea, no en el repo); segunda pasada tras aplicar las decisiones del propietario:
