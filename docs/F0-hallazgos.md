@@ -171,3 +171,16 @@ Aplicado: una venta confirmada **no cambia de estado** al cancelarse la póliza;
 - 29 documentos de la matriz (D01-D29) + 3 generales = 32; 9 KBs (Management, Sales, Finance, Insurance, Company, EMP001-004) cuadran con los documentos y con los asistentes.
 - Todas las celdas de la matriz cumplen la regla 2 con los clearance de H-03.
 - Números ancla: 12 ventas, 9.680 €, 968 € (10 %), 12.000 € de objetivo, 80,7 % y los cumplimientos por empleado, 7.250 € de gastos — todos representables (y comprobados con datos de prueba en PostgreSQL 16, ver el informe).
+
+---
+## Validación realizada en F0 (y límites)
+Verificado con herramientas locales (scripts auxiliares **no versionados**; el repo no contiene código en F0):
+- **DDL real**: las 54 `CREATE TABLE` y 150 índices de [schema.md](data-model/schema.md) se ejecutaron sin errores en una instancia temporal de PostgreSQL 16 (con `btree_gist`), con las FK circulares añadidas después con `ALTER TABLE ... DEFERRABLE`. Se probaron los CHECK/UNIQUE/EXCLUDE clave (comisión = `round(base*tasa,2)`, gasto no `DRAFT` ⇒ asiento, categoría `PAYROLL` prohibida, factura con contraparte coherente, grant duplicado, FK compuesta KB↔dataset, mensaje de usuario sin tokens, solape de contratos, partición de auditoría inexistente ⇒ error).
+- **Números ancla de octubre** con datos de prueba: 12 ventas, 12 pólizas, 9.680,00 € de primas, 968,00 € de comisiones, 7.250,00 € de gastos (6 categorías, cada gasto con su asiento equilibrado), 12.000,00 € de objetivos y cumplimientos 105,0 / 76,0 / 73,2 / 68,8 % (80,7 % total).
+- **Coherencia**: cada FK referencia una tabla y columna existentes y única; cada FK tiene índice; los importes son `NUMERIC(14,2)` (excepciones declaradas en H-12) y todas las tablas con importes tienen moneda; ERD generado desde el esquema; todos los H-, RF-, RNF-, UC-, NEG- referenciados están definidos; sin enlaces relativos rotos; el grafo de módulos es acíclico y contiene exactamente los 14 módulos.
+- **Matriz**: `permissions-spec.yaml` se expandió con el oráculo de la sección 1 de permissions-mapping (127 grants, 1.344 celdas, 321 ALLOW; los 12 casos negativos probados dan DENY; ningún grant inerte).
+
+**No verificado:**
+- Sintaxis **Mermaid**: no hay `mmdc` ni biblioteca Mermaid en la máquina y no se instaló nada. Solo hay un lint estructural propio (tipo de diagrama, llaves/corchetes/comillas, bloques `end`, entidades declaradas); se evitaron `;` y `#` y se mantuvo la sintaxis simple. Conviene abrir los `.md` en un visor con Mermaid (GitHub, VS Code) antes de darlos por buenos.
+- API de Dify 1.18 (H-22), tarifas de Gemini (H-33), rendimiento de índices con volumen real (el dataset es pequeño), triggers descritos pero no escritos (equilibrio de asientos, validación de `subject_id`, append-only de auditoría), `NULLS NOT DISTINCT` en versiones de PostgreSQL < 15.
+- La conformidad de la matriz Markdown con `permissions-spec.yaml` se revisó a mano (códigos y celdas), sin un parser automático de la tabla Markdown.
