@@ -1,12 +1,14 @@
 # ERD de SegurPlus
 
-Generado a partir de [schema.md](schema.md) (11 tablas) con un script auxiliar no versionado; si cambia schema.md hay que regenerarlo o actualizarlo a mano.
+Generado a partir de [schema.md](schema.md) (12 tablas) con un script auxiliar no versionado; si cambia schema.md hay que regenerarlo o actualizarlo a mano.
 Notación Mermaid: `||` exactamente uno, `|o` cero o uno, `}o` cero o muchos. `audit_logs.user_id` es una referencia lógica sin FK (punteada).
 
 ## Vista general (solo relaciones)
 
 ```mermaid
 erDiagram
+  users ||--o{ refresh_tokens : "user_id"
+  refresh_tokens |o--o{ refresh_tokens : "replaced_by"
   users |o--o{ documents : "owner_id"
   users ||--o{ documents : "created_by"
   users ||--o{ conversations : "user_id"
@@ -20,7 +22,7 @@ erDiagram
   users |o..o{ audit_logs : "user_id sin FK"
 ```
 
-## Usuarios, documentos y conversaciones
+## Usuarios, sesiones, documentos y conversaciones
 
 ```mermaid
 erDiagram
@@ -38,6 +40,16 @@ erDiagram
     varchar dify_user_ref UK
     boolean active
     timestamptz created_at
+  }
+  refresh_tokens {
+    uuid id PK
+    uuid user_id FK
+    char token_hash UK
+    uuid family_id
+    timestamptz issued_at
+    timestamptz expires_at
+    timestamptz revoked_at
+    uuid replaced_by FK
   }
   documents {
     uuid id PK
@@ -83,6 +95,8 @@ erDiagram
     varchar status
     timestamptz created_at
   }
+  users ||--o{ refresh_tokens : "user_id"
+  refresh_tokens |o--o{ refresh_tokens : "replaced_by"
   users |o--o{ documents : "owner_id"
   users ||--o{ documents : "created_by"
   users ||--o{ conversations : "user_id"
@@ -154,9 +168,7 @@ erDiagram
     date issue_date
     date due_date
     date period_month
-    numeric net_amount
-    numeric tax_amount
-    numeric total_amount
+    numeric amount
     char currency
     varchar status
     varchar ledger_account
@@ -170,8 +182,6 @@ erDiagram
     varchar supplier
     varchar description
     numeric amount
-    numeric tax_amount
-    numeric total_amount
     char currency
     varchar status
     varchar ledger_account

@@ -1,6 +1,6 @@
 # Esquema PostgreSQL (documentación, no ejecutable)
 
-El DDL es **documentación de diseño**; las migraciones Flyway reales se escriben en F1. ERD: [erd.md](erd.md). **11 tablas**, sin particionado, sin triggers y sin `EXCLUDE`.
+El DDL es **documentación de diseño**; las migraciones Flyway reales se escriben en F1. ERD: [erd.md](erd.md). **12 tablas**, sin particionado, sin triggers y sin `EXCLUDE`.
 
 ## Convenciones
 | Tema | Regla |
@@ -9,16 +9,16 @@ El DDL es **documentación de diseño**; las migraciones Flyway reales se escrib
 | Importes | `NUMERIC(14,2)` + columna `currency char(3)` (ISO 4217, por defecto `EUR`). No hay precios de IA, así que no hace falta más precisión. |
 | Tasas | `NUMERIC(5,4)` entre 0 y 1 (0,1000 = 10 %). |
 | Fechas | Fechas de negocio (venta, inicio, periodo) `date`; los periodos mensuales son `date` con día 1 (CHECK). Instantes `timestamptz`. |
-| Reloj | La aplicación rellena `created_at`/`updated_at` con el `Clock` inyectable (ADR 0006); `DEFAULT now()` es solo red de seguridad. `audit_logs` guarda `occurred_at` (tiempo real) y `business_date` (fecha ficticia). |
+| Reloj | La aplicación rellena `created_at`/`updated_at` con el `Clock` inyectable (ADR 0006); `DEFAULT now()` es solo red de seguridad. `audit_logs` guarda `occurred_at` (tiempo real) y `business_date` (fecha ficticia). `refresh_tokens` usa siempre tiempo real. |
 | Enumeraciones | `text` + `CHECK (col IN (...))`. |
 | Borrado | Soft delete (`deleted_at`) solo en `documents` y `conversations`. Lo demás no se borra. |
 | FK | `ON DELETE RESTRICT` por defecto; cada FK tiene índice. |
-| Sensibles | `users.monthly_salary` solo lo lee el generador de nóminas: ningún DTO, endpoint ni herramienta lo expone. `messages.content` es el único contenido de conversación y nunca va a `audit_logs` ni a logs. |
+| Sensibles | `refresh_tokens.token_hash` guarda solo el hash del token. `users.monthly_salary` solo lo lee el generador de nóminas: ningún DTO, endpoint ni herramienta lo expone. `messages.content` es el único contenido de conversación y nunca va a `audit_logs` ni a logs. |
 
 ## Tablas por paquete
 | Paquete | Tablas |
 |---|---|
-| `auth` | `users` |
+| `auth` | `users`, `refresh_tokens` |
 | `documents` | `documents` |
 | `ai` | `conversations`, `messages` |
 | `data` | `customers`, `policies`, `commissions`, `invoices`, `expenses`, `sales_targets` |
@@ -47,6 +47,26 @@ CREATE TABLE users (
   active         boolean      NOT NULL DEFAULT true,
   created_at     timestamptz  NOT NULL DEFAULT now()
 );
+```
+
+### refresh_tokens
+Refresh token **opaco y aleatorio**; en BD solo se guarda su hash SHA-256, nunca el token. Cada uso lo **rota**: la fila usada queda con `revoked_at` y `replaced_by` apuntando a la nueva, de la misma `family_id`. Si llega un token ya rotado o revocado se revoca **toda la familia** (detección de reutilización). Se envía en cookie `HttpOnly; Secure; SameSite=Strict`. `issued_at`/`expires_at` usan tiempo real (ADR 0007).
+```sql
+CREATE TABLE refresh_tokens (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     uuid NOT NULL REFERENCES users(id),
+  token_hash  char(64)    NOT NULL UNIQUE,         -- SHA-256 en hex; nunca el token
+  family_id   uuid        NOT NULL,                -- misma cadena de rotaciones
+  issued_at   timestamptz NOT NULL DEFAULT now(),
+  expires_at  timestamptz NOT NULL,
+  revoked_at  timestamptz,
+  replaced_by uuid REFERENCES refresh_tokens(id),  -- token que lo sustituyó al rotar
+  CONSTRAINT ck_refresh_expiry CHECK (expires_at > issued_at),
+  CONSTRAINT ck_refresh_replaced CHECK (replaced_by IS NULL OR revoked_at IS NOT NULL)
+);
+CREATE INDEX ix_refresh_tokens_user ON refresh_tokens (user_id);
+CREATE INDEX ix_refresh_tokens_family ON refresh_tokens (family_id);
+CREATE INDEX ix_refresh_tokens_replaced ON refresh_tokens (replaced_by) WHERE replaced_by IS NOT NULL;
 ```
 
 ---
@@ -215,14 +235,11 @@ CREATE TABLE invoices (
   issue_date     date NOT NULL,
   due_date       date NOT NULL,
   period_month   date NOT NULL CHECK (period_month = date_trunc('month', period_month)::date),
-  net_amount     numeric(14,2) NOT NULL CHECK (net_amount >= 0),
-  tax_amount     numeric(14,2) NOT NULL DEFAULT 0 CHECK (tax_amount >= 0),
-  total_amount   numeric(14,2) NOT NULL,
+  amount         numeric(14,2) NOT NULL CHECK (amount >= 0),
   currency       char(3) NOT NULL DEFAULT 'EUR' CHECK (currency ~ '^[A-Z]{3}$'),
   status         varchar(6) NOT NULL DEFAULT 'OPEN' CHECK (status IN ('OPEN','PAID','VOID')),
   ledger_account varchar(8) NOT NULL,                      -- cuenta del plan contable
   created_at     timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT ck_invoices_total CHECK (total_amount = net_amount + tax_amount),
   CONSTRAINT ck_invoices_due CHECK (due_date >= issue_date)
 );
 CREATE INDEX ix_invoices_period ON invoices (period_month, direction);
@@ -240,14 +257,11 @@ CREATE TABLE expenses (
   supplier       varchar(120) NOT NULL,
   description    varchar(200) NOT NULL,
   amount         numeric(14,2) NOT NULL CHECK (amount >= 0),
-  tax_amount     numeric(14,2) NOT NULL DEFAULT 0 CHECK (tax_amount >= 0),
-  total_amount   numeric(14,2) NOT NULL,
   currency       char(3) NOT NULL DEFAULT 'EUR' CHECK (currency ~ '^[A-Z]{3}$'),
   status         varchar(8) NOT NULL DEFAULT 'APPROVED' CHECK (status IN ('DRAFT','APPROVED','VOID')),
   ledger_account varchar(8) NOT NULL,                      -- enlace contable por columna
   invoice_id     uuid REFERENCES invoices(id),
   created_at     timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT ck_expenses_total CHECK (total_amount = amount + tax_amount),
   CONSTRAINT ck_expenses_ledger CHECK (status = 'DRAFT' OR ledger_account <> '')
 );
 CREATE INDEX ix_expenses_date ON expenses (expense_date);
@@ -279,7 +293,8 @@ CREATE TABLE audit_logs (
   user_id        uuid,                                 -- sin FK
   action         varchar(24) NOT NULL
                  CHECK (action IN ('LOGIN','LOGIN_FAILED','DOCUMENT_READ','DOCUMENT_DOWNLOAD','DOCUMENT_UPLOAD',
-                                   'ACCESS_DENIED','CHAT','TOOL_CALL','FRAGMENT_DROPPED','IGNORED_CLIENT_FIELD')),
+                                   'ACCESS_DENIED','CHAT','TOOL_CALL','FRAGMENT_DROPPED','IGNORED_CLIENT_FIELD',
+                                   'TOKEN_REFRESH','TOKEN_REUSE_DETECTED','LOGOUT')),
   resource_type  varchar(16),
   resource_id    varchar(64),
   decision       varchar(5) NOT NULL CHECK (decision IN ('ALLOW','DENY')),
@@ -301,7 +316,7 @@ Con los datos sembrados (consultas por `sale_date`, `period_month` y `expense_da
 | Pólizas vendidas en octubre | 12 (3 por empleado) |
 | Primas | 9.680,00 € (EMP001 3.150, EMP002 2.280, EMP003 2.050, EMP004 2.200) |
 | Comisiones de empleado (10 %) | 968,00 € |
-| Gastos (`total_amount`, sin nóminas ni comisiones) | 7.250,00 € |
+| Gastos (`amount`, sin nóminas ni comisiones) | 7.250,00 € |
 | Objetivos | 12.000,00 € (3.000 / 3.000 / 2.800 / 3.200); cumplimiento 105,0 / 76,0 / 73,2 / 68,8 % y 80,7 % total |
 
 Validados con PostgreSQL 16 (ver [DECISIONES](../DECISIONES.md#validaciones)).
