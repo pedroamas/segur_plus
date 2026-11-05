@@ -6,7 +6,7 @@ flowchart TB
 
   subgraph Backend["Backend Spring Boot 3, Java 21 (un despliegue)"]
     API["API REST /api/v1<br/>+ SSE del chat"]
-    SEC["Spring Security JWT<br/>+ AccessPolicyService"]
+    SEC["Spring Security JWT + refresh<br/>+ AccessPolicyService"]
     BIZ["Paquetes documents y data"]
     AIM["Paquete ai<br/>AiGateway + orquestador de chat + indexador"]
   end
@@ -41,7 +41,7 @@ flowchart TB
 |---|---|---|---|
 | Frontend | React, TS, React Router, pdf.js | Login, Documentos, Chat, Dashboard. No decide permisos; consume SSE con `fetch` + `ReadableStream` | Nada sensible persistente |
 | Backend | Spring Boot, JPA, Flyway | Lógica, política de acceso, orquestación RAG/SQL | Sin estado |
-| PostgreSQL | PG 16 | **Fuente de verdad** ([schema.md](../data-model/schema.md)) | 11 tablas |
+| PostgreSQL | PG 16 | **Fuente de verdad** ([schema.md](../data-model/schema.md)) | 12 tablas |
 | MinIO | bucket privado | Originales de documentos | Binarios; clave `documents/<docId>/<sha256>` |
 | Dify | 1.18 | Indexación, recuperación, generación | Copia derivada del texto y metadatos; reconstruible |
 | Gemini | API externa | LLM; se alcanza a través de Dify | Nada nuestro |

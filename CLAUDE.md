@@ -11,7 +11,7 @@ com.segurplus.<paquete>/
   api/   controladores REST + DTOs (nunca exponer entidades)
   ...    servicios, entidades y repositorios (repositorios no públicos)
 ```
-Paquetes: `auth` (login, JWT, `AccessPolicyService`), `documents`, `ai` (AiGateway, indexador, chat), `data` (customers, policies, commissions, invoices, expenses, sales_targets), `audit`, `shared` (Clock, errores, Money).
+Paquetes: `auth` (login, JWT + refresh, `AccessPolicyService`), `documents`, `ai` (AiGateway, indexador, chat), `data` (customers, policies, commissions, invoices, expenses, sales_targets), `audit`, `shared` (Clock, errores, Money).
 
 Reglas simples: dependencias sin ciclos (`ai → documents, data, auth, audit`; `documents`/`data → auth, audit`); un paquete solo usa los **servicios públicos** de otro; sin Spring Modulith.
 
@@ -19,6 +19,7 @@ Reglas simples: dependencias sin ciclos (`ai → documents, data, auth, audit`; 
 - Autorización **siempre en el backend**, con `AccessPolicyService` (deny by default). Nada de decisiones en el frontend, en el prompt ni en Dify.
 - Regla de documentos: READ/DOWNLOAD si `rol ∈ documents.allowed_roles` o `owner_id = usuario`; CREATE/UPDATE/DELETE/ADMINISTER solo MANAGER.
 - La identidad sale del JWT. Ignorar `employee_id`, `role`, `assistantId`, `datasetId` enviados por el cliente.
+- Sesión (ADR 0007): access token de 10-15 min; refresh opaco en cookie `HttpOnly; Secure; SameSite=Strict`, con **rotación en cada uso**, solo su hash SHA-256 en BD y **reutilización ⇒ se revoca toda la familia**. Endpoints `POST /api/v1/auth/refresh` y `/auth/logout`. Nunca registrar tokens ni cookies.
 - Recurso no autorizado → 404. Listados filtrados en la consulta (Specification), no en memoria.
 - Cada fragmento recuperado de Dify se **re-autoriza** antes de enviarlo al LLM.
 - El LLM no ejecuta SQL libre; solo las 4 herramientas tipadas, que reutilizan los servicios de `data`; `employee_id` nunca es parámetro.
@@ -26,7 +27,7 @@ Reglas simples: dependencias sin ciclos (`ai → documents, data, auth, audit`; 
 - No registrar JWT, prompts, respuestas ni contenido de fragmentos. Logs con ID de correlación.
 - Secretos en `.env` (no versionado). La clave de Dify solo en el backend.
 - IDs expuestos: UUID. Importes: `NUMERIC(14,2)` + moneda. Errores: RFC 7807. API bajo `/api/v1`.
-- «Hoy» sale del `Clock` inyectable (2027-01-15); nada de `Instant.now()`/`LocalDate.now()` fuera de `shared` (excepción: expiración del JWT en `auth`).
+- «Hoy» sale del `Clock` inyectable (2027-01-15); nada de `Instant.now()`/`LocalDate.now()` fuera de `shared` (excepción: expiración del JWT y del refresh en `auth`, tiempo real).
 
 ## Cómo trabajar
 - Cambios pequeños. Cada funcionalidad entra con sus tests, **incluidos los de autorización**.

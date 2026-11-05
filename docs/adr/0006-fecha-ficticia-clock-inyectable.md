@@ -7,7 +7,7 @@ Diciembre de 2026 es futuro real; sin control, «este mes» lo resolvería la fe
 
 ## Decisión
 1. Un bean `java.time.Clock` en `shared`, con la **fecha de negocio** configurable (`segurplus.clock.fixed-date`, por defecto `2027-01-15`; zona `Europe/Madrid`; modo `SYSTEM` posible). Se usa para «hoy», «este mes», periodos, `created_at` de dominio, `audit_logs.business_date` y la fecha que se pasa al asistente (`{{today}}`).
-2. La **expiración del JWT** usa el tiempo real del sistema (`Instant.now()` solo en la clase de emisión/validación de tokens, dentro de `auth`; la única excepción a la regla 3). `audit_logs.occurred_at` es tiempo real (`DEFAULT now()`).
+2. La **expiración del JWT y del refresh token** ([ADR 0007](0007-sesiones-jwt-refresh-rotativo.md)) usa el tiempo real del sistema (`Instant.now()` solo en la clase de emisión/validación de tokens, dentro de `auth`; la única excepción a la regla 3). `audit_logs.occurred_at` es tiempo real (`DEFAULT now()`).
 3. Nadie más usa `Instant.now()`, `LocalDate.now()` ni `now()` de BD para lógica; se inyecta el `Clock`. Regla ArchUnit opcional (ADR 0001).
 4. El asistente no resuelve fechas relativas: la fecha entra en el prompt y las herramientas reciben periodos ya resueltos (ADR 0005).
 5. **Tests**: se sustituye el `Clock` (`Clock.fixed(...)`) para probar «este mes» y periodos. Un test del seed comprueba que ningún dato se genera con fecha posterior a la de negocio salvo lo explícitamente futuro (fechas de renovación).
@@ -22,4 +22,4 @@ Diciembre de 2026 es futuro real; sin control, «este mes» lo resolvería la fe
 
 ## Consecuencias
 - (+) Resultados deterministas; «este mes» = enero de 2027 en toda la aplicación.
-- (−) La expiración del JWT es la excepción explícita a la regla del `Clock`; se documenta y se prueba aparte.
+- (−) La expiración del JWT y del refresh es la excepción explícita a la regla del `Clock`; se documenta y se prueba aparte.

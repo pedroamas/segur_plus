@@ -3,7 +3,7 @@
 **Objetivo:** cuatro pantallas que muestran el backend sin decidir nada.
 
 **Entregables**
-- React + TypeScript + React Router, cliente generado de OpenAPI; el JWT solo en memoria o en el almacenamiento elegido en F1.
+- React + TypeScript + React Router, cliente generado de OpenAPI; el access JWT solo en memoria; renovación automática con `POST /api/v1/auth/refresh` (cookie HttpOnly) ante un 401 y logout con `/auth/logout`.
 - **Login**.
 - **Documentos**: listado con filtros, **visor PDF** (pdf.js), **preview de Excel** (HTML del servidor), descarga.
 - **Chat**: streaming SSE con `fetch` + `ReadableStream`, citas clicables que abren el documento (si el usuario puede leerlo), lista de conversaciones propias.
@@ -15,6 +15,7 @@
 2. En cada rol, la lista de documentos del UI coincide con la matriz (7 comprobaciones E2E).
 3. PDF y Excel se visualizan; la descarga funciona solo donde la matriz lo permite.
 4. El bundle del frontend y las respuestas de red **no contienen** la clave de Dify (búsqueda automatizada).
-5. Una respuesta de chat llega por streaming y muestra al menos una cita válida en una pregunta documental.
+5. Tras caducar el access token, la sesión se renueva sin pedir login; tras logout, no (prueba E2E).
+6. Una respuesta de chat llega por streaming y muestra al menos una cita válida en una pregunta documental.
 
 **Fuera de alcance:** diseño visual elaborado.

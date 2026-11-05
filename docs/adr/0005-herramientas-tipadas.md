@@ -34,4 +34,4 @@ Sin herramientas para gastos, facturas, clientes ni nóminas: gastos y facturas 
 
 ## Consecuencias
 - (+) Superficie pequeña y enumerable; el dashboard y el chat dan la misma cifra (CA-7).
-- (−) Preguntas sobre gastos o facturas dependen del texto de los documentos; ampliar el catálogo (`get_expenses`) es una decisión del propietario.
+- (−) Preguntas sobre gastos o facturas dependen del texto de los documentos; el propietario decidió **no** añadir una herramienta de gastos.

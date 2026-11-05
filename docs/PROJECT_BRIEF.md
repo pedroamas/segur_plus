@@ -43,10 +43,11 @@ Todos los datos son ficticios.
 9. Contenido de documentos = **dato no confiable** (prompt injection). El LLM no tiene herramientas de escritura.
 10. Auditoría con **metadatos**, no con contenido. Nunca registrar JWT, prompts ni fragmentos.
 11. La clave de Dify (y la de Gemini) solo existe en el backend.
+12. **Sesión**: access JWT de 10-15 min + refresh token opaco en cookie `HttpOnly; Secure; SameSite=Strict`, con rotación en cada uso, hash en BD y revocación de toda la familia si se reutiliza uno rotado; `POST /api/v1/auth/refresh` y `/auth/logout` ([ADR 0007](adr/0007-sesiones-jwt-refresh-rotativo.md)).
 
 ## 5. Arquitectura
 ```
-React + TS  →  Spring Boot (5 paquetes)  →  PostgreSQL (11 tablas: datos, metadatos, auditoría)
+React + TS  →  Spring Boot (5 paquetes)  →  PostgreSQL (12 tablas: usuarios y sesiones, datos, metadatos, auditoría)
                      │                    →  MinIO (originales)
                      └── AiGateway (puerto) →  Dify (Knowledge API + chat-messages)  →  Gemini
 ```
@@ -99,7 +100,7 @@ React + TS  →  Spring Boot (5 paquetes)  →  PostgreSQL (11 tablas: datos, me
 ## 8. Criterios de aceptación (medibles)
 1. **Matriz de acceso al 100 %** (usuario × documento × acción, generada de la política) en REST, listados, recuperación RAG, citas, herramientas SQL y descargas.
 2. **Ningún acceso cruzado**: EMP↔EMP, ACC↔Dirección, COM↔Dirección/nóminas, conversaciones ajenas; incluye el corpus de prompt injection.
-3. **Identidad solo por JWT**: rol, identidad, asistente o KB enviados por el cliente no cambian el resultado.
+3. **Identidad solo por JWT y sesión robusta**: rol, identidad, asistente o KB enviados por el cliente no cambian el resultado; el refresh rota en cada uso, la reutilización de uno rotado revoca la familia, el logout invalida el refresh y un refresh caducado da 401.
 4. **La clave de Dify no aparece en el frontend** (bundle y tráfico de red).
 5. **PDF visualizable, Excel previsualizable y descarga** autorizada y auditada; no autorizado ⇒ 404.
 6. **Recall@5 ≥ 0,8 y 100 % de citas válidas** sobre el conjunto de ~30 preguntas.

@@ -20,7 +20,7 @@ Reglas simples ([03-components](../architecture/03-components.md)):
 ## Alternativas
 | Alternativa | Por qué no |
 |---|---|
-| Spring Modulith con 14 módulos (versión F0) | Complejidad desproporcionada para 11 tablas y 7 usuarios; el valor del portfolio está en la seguridad |
+| Spring Modulith con 14 módulos (versión F0) | Complejidad desproporcionada para 12 tablas y 7 usuarios; el valor del portfolio está en la seguridad |
 | Microservicios | Coste operativo sin beneficio; dificulta que una sola política gobierne todo |
 | Capas globales (controller/service/repository) | No muestra fronteras funcionales; los ciclos aparecen solos |
 

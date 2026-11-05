@@ -7,7 +7,7 @@ Cifras ancla (octubre 2026): 12 pólizas vendidas, 9.680 € de primas, 968 € 
 ## 1. Requisitos funcionales
 | ID | Requisito | CA | Paquete |
 |---|---|---|---|
-| RF-01 | Autenticación con JWT; 7 usuarios sembrados | 3 | auth |
+| RF-01 | Autenticación con access JWT (10-15 min) y refresh con rotación en cookie HttpOnly/SameSite; reutilización revoca la familia; `POST /auth/refresh` y `/auth/logout`; 7 usuarios sembrados | 3 | auth |
 | RF-02 | Dashboard sencillo por rol (pocas cifras) con los mismos servicios que las herramientas del chat | 7 | data |
 | RF-03 | Listado y filtros de documentos filtrados por la política en la consulta (también conteos) | 1 | documents, auth |
 | RF-04 | Visualización: PDF con pdf.js; Excel con previsualización generada en servidor | 5 | documents |
@@ -35,7 +35,7 @@ Cifras ancla (octubre 2026): 12 pólizas vendidas, 9.680 € de primas, 968 € 
 | RNF-05 | Cada funcionalidad con pruebas unitarias, de integración y **de autorización** | 1, 2 |
 | RNF-06 | `docker compose up` + seed reproduce el entorno; CI ejecuta los tests | 8 |
 | RNF-07 | Fecha de negocio 2027-01-15 desde un `Clock` inyectable (ADR 0006) | 7 |
-| RNF-08 | Secretos fuera del repo y del frontend; la clave de Dify solo en backend | 4 |
+| RNF-08 | Secretos fuera del repo y del frontend; la clave de Dify solo en backend; los refresh tokens solo como hash en BD | 4 |
 | RNF-09 | Archivos en MinIO privado, acceso solo vía backend | 5 |
 | RNF-10 | Contenido de documentos como dato no confiable; el LLM sin herramientas de escritura | 2 |
 | RNF-11 | Documentación suficiente: README, diagramas, ADRs, OpenAPI | — |
@@ -43,7 +43,8 @@ Cifras ancla (octubre 2026): 12 pólizas vendidas, 9.680 € de primas, 968 € 
 ## 3. Casos de uso comunes (los 7 usuarios)
 | ID | Caso de uso | Actor | Aceptación | RF | CA |
 |---|---|---|---|---|---|
-| UC-01 | Iniciar y cerrar sesión | todos | 7 logins válidos; JWT expira | RF-01 | 3, 8 |
+| UC-01 | Iniciar y cerrar sesión | todos | 7 logins válidos; el access JWT expira; logout invalida el refresh | RF-01 | 3, 8 |
+| UC-09 | Renovar la sesión | todos | refresh rota (token nuevo cada vez); reutilizar un refresh rotado ⇒ 401 y familia revocada; refresh caducado ⇒ 401 | RF-01 | 3 |
 | UC-02 | Ver mi dashboard | todos | cada rol ve las cifras de su alcance; ninguna ajena | RF-02 | 2, 7 |
 | UC-03 | Listar documentos | todos | solo documentos con READ; conteos coinciden con el listado | RF-03 | 1 |
 | UC-04 | Visualizar un documento (PDF o Excel) | todos | READ ⇒ visor; sin READ ⇒ 404 (NEG-07) | RF-04 | 5 |
@@ -115,7 +116,7 @@ Para cada rol: pregunta → ruta esperada → resultado esperado → lo que **no
 |---|---|---|---|
 | 1. Matriz de acceso al 100 % (REST, listados, RAG, citas, herramientas, descargas) | UC-03..UC-05, UC-11, UC-20, UC-31, UC-41 | RF-03..RF-06, RF-09, RNF-01, RNF-05 | matriz generada de `permissions-spec.yaml` ([permissions-mapping §6](../data-model/permissions-mapping.md)) |
 | 2. Ningún acceso cruzado | UC-02, UC-07, UC-08, UC-62 | RF-10, RF-11, RF-16 | NEG-01..NEG-12 + corpus de inyección |
-| 3. Identidad solo por JWT | UC-01, UC-08 | RF-01, RF-17 | pruebas con campos manipulados |
+| 3. Identidad solo por JWT y sesión robusta | UC-01, UC-08, UC-09 | RF-01, RF-17 | pruebas con campos manipulados y tests de rotación, reutilización, logout y caducidad |
 | 4. Clave de Dify fuera del frontend | UC-06 | RNF-08 | análisis del bundle y del tráfico |
 | 5. PDF/Excel y descarga autorizada | UC-04, UC-05 | RF-04, RF-05, RNF-09 | pruebas E2E + auditoría |
 | 6. Recall y citas válidas en ~30 preguntas | UC-06, UC-A03, UC-A31, UC-60 | RF-08, RF-09, RF-16 | script de evaluación |

@@ -5,7 +5,7 @@ Rama `simple`, creada desde `f0-diseno` (que queda intacta como referencia). El 
 ## Qué se recortó
 | Área | Antes (F0) | Ahora | Por qué |
 |---|---|---|---|
-| Tablas | 54 | **11**: `users`, `customers`, `policies`, `commissions`, `invoices`, `expenses`, `sales_targets`, `documents`, `conversations`, `messages`, `audit_logs` | El valor del portfolio no está en un modelo de CRM, RR. HH. y contabilidad completos |
+| Tablas | 54 | **12**: `users`, `refresh_tokens`, `customers`, `policies`, `commissions`, `invoices`, `expenses`, `sales_targets`, `documents`, `conversations`, `messages`, `audit_logs` | El valor del portfolio no está en un modelo de CRM, RR. HH. y contabilidad completos |
 | Usuarios y roles | users, roles, permissions, user_roles, role_permissions, employees, departments | Una tabla `users` con `role` (enum), `department`, `employee_code` y `monthly_salary` | 4 roles fijos |
 | Ventas | leads, oportunidades, ventas, actividades, coberturas, renovaciones, cancelaciones | **La venta es la póliza** (`policies`); cancelación y renovación como columnas; comisión del asegurador como columnas | Menos entidades con los mismos números ancla |
 | Finanzas | asientos, líneas, plan de cuentas, pagos | `invoices` y `expenses`; enlace contable = columna `ledger_account` | |
@@ -18,17 +18,19 @@ Rama `simple`, creada desde `f0-diseno` (que queda intacta como referencia). El 
 | Frontend | 8+ pantallas | Login, Documentos, Chat, Dashboard sencillo | |
 | Fases | 10 | **5** (F1-F5) | |
 | Criterios de aceptación | 11 | **8** | |
-| Operación | outbox, reconciliación, particionado de auditoría, triggers, `EXCLUDE`, refresh con rotación, antivirus, circuit breaker, cuota diaria | Fuera del diseño base (mejoras opcionales) | |
+| Operación | outbox, reconciliación, particionado de auditoría, triggers, `EXCLUDE`, antivirus, circuit breaker, cuota diaria | Fuera del diseño base (mejoras opcionales) | |
 
 **No se tocó (núcleo de seguridad):** identidad solo del JWT; un único `AccessPolicyService` con deny by default; 404 y listados filtrados en la consulta; re-autorización de cada fragmento antes del LLM; sin SQL libre y `employee_id` nunca como parámetro; auditoría; batería de acceso cruzado; clave de Dify solo en backend; MinIO privado vía backend. Tampoco cambian el stack, A1, A2, los 7 usuarios, los 29+3 documentos ni los números ancla de octubre.
 
 ## Consecuencias del recorte a tener presentes
-- **READ y DOWNLOAD van unidos.** SALES_MANAGER pasa a poder *descargar* D11 y la actividad comercial (D15, D18, D21, D24), que antes eran solo lectura. El visor ya entrega el fichero completo, así que no era una barrera técnica.
-- **Sin herramienta de gastos ni facturas.** Esas preguntas se responden desde los documentos D07, D12 y D13 (RAG), no desde la BD.
+- **READ y DOWNLOAD van unidos** (decidido). SALES_MANAGER puede leer y descargar D11 y la actividad comercial (D15, D18, D21, D24).
+- **Sin herramienta de gastos ni facturas** (decidido: no se añade `get_expenses`). Esas preguntas se responden desde los documentos D07, D12 y D13 (RAG), no desde la BD.
 - **Un único dataset de empleados en Dify.** El aislamiento entre empleados lo garantiza la re-autorización; el filtro `owner_id` en Dify solo mejora el recall (ADR 0003).
 - **Sin revocación por usuario individual ni caducidad**: solo por rol y propietario.
-- **JWT sin refresh**: sesión corta, nuevo login al expirar.
-- **El caso de prueba «COM001 no descarga D15»** desaparece (consecuencia de unir READ y DOWNLOAD).
+- **Sesión con refresh token rotativo** (decidido; [ADR 0007](adr/0007-sesiones-jwt-refresh-rotativo.md)): una tabla más, `refresh_tokens`.
+- **Importes únicos** en `expenses` e `invoices` (columna `amount`, sin desglose de impuestos).
+- **Historial de chat**: se guarda sin caducidad y sin job de retención (decisión por defecto, reversible).
+- **El caso de prueba «COM001 no descarga D15»** no existe; la matriz tiene controles positivos de READ y DOWNLOAD para COM001.
 
 ## Hallazgos de F0 (H-01 … H-33)
 El fichero `F0-hallazgos.md` se retira de esta rama (sigue en `f0-diseno`). Estado de cada hallazgo tras el recorte:
@@ -36,21 +38,21 @@ El fichero `F0-hallazgos.md` se retira de esta rama (sigue en `f0-diseno`). Esta
 | ID | Tema | Estado | Cómo queda |
 |---|---|---|---|
 | H-01 | IDs de actividad comercial | Resuelto | D15, D18, D21, D24; `SALES_MANAGER` en su `allowed_roles` |
-| H-02 | 12 pólizas en octubre frente a 150-300 en total | **Pendiente** (baja) | Propuesta: los 150-300 incluyen cartera previa; se fija en F2 |
+| H-02 | 12 pólizas en octubre frente a 150-300 en total | **PENDIENTE** (el propietario aún no lo ha aclarado) | Sin tocar. Propuesta no aplicada: los 150-300 incluyen cartera previa |
 | H-03 | Clearance del sujeto | Descartado por el recorte | No hay clearance |
 | H-04 | Alcance de la regla de propietario | Resuelto | Propietario ⇒ READ/DOWNLOAD (`owner_id`) |
 | H-05 | CREATE/UPDATE/DELETE/ADMINISTER | Resuelto | Solo MANAGER |
 | H-06 | D11 para COM001 y su asistente | Resuelto | KB-Finanzas en su perfil y `SALES_MANAGER` en `allowed_roles` de D11 |
 | H-07 | Actividad comercial en KB-EMPxxx | Resuelto | KB-Empleados única; acceso por `allowed_roles` |
-| H-08 | READ sin DOWNLOAD frente al visor | Resuelto con consecuencia | Se unen READ y DOWNLOAD (ver pendientes) |
+| H-08 | READ sin DOWNLOAD frente al visor | Resuelto | READ y DOWNLOAD unidos (decidido por el propietario) |
 | H-09 | «Vistas con alcance» | Resuelto | El alcance se aplica en Java (`data`); ninguna vista |
 | H-10 | Quién propone las herramientas | Resuelto | Llamada de planificación validada por el backend (ADR 0003) |
 | H-11 | Verificación frente a streaming | Resuelto | Streaming real y evento final `verification` como señal de calidad (el LLM solo ve texto autorizado) |
 | H-12 | `NUMERIC(14,2)` y costes de IA | Descartado por el recorte | No hay precios; `NUMERIC(14,2)` en todo |
-| H-13 | Contenido del chat y revocaciones | **Pendiente** (baja) | El contenido solo vive en `messages` (propietario únicamente). Falta decidir retención; un texto ya generado no se «des-dice» si se revoca después un documento (las fuentes se re-autorizan al releer) |
-| H-14 | Catálogo de herramientas | Resuelto por el recorte | 4 herramientas; ver pendientes (`get_expenses`) |
+| H-13 | Contenido del chat y revocaciones | Resuelto por defecto (reversible) | El contenido solo vive en `messages` (propietario únicamente); se guarda sin caducidad y sin job de retención. Un texto ya generado no se «des-dice» si se revoca después un documento (las fuentes se re-autorizan al releer) |
+| H-14 | Catálogo de herramientas | Resuelto | 4 herramientas; `get_expenses` **no se añade** (decidido); gastos y facturas solo por RAG sobre D07/D12/D13 |
 | H-15 | Permisos de datos y conversaciones ajenas | Resuelto | Alcance por herramienta; conversaciones solo del propietario (ni MANAGER) |
-| H-16 | 7.250 € ¿base o con IVA? | **Pendiente** (baja) | Se aplica a `expenses.total_amount` (IVA 0 en el seed); confirmar |
+| H-16 | Desglose del importe de gastos | Descartado | Importe único (`amount`); no hay desglose |
 | H-17 | Factura→operación en un corredor | Resuelto | `invoices` emitidas (a la aseguradora) y recibidas (proveedores) |
 | H-18 | Imperfecciones deliberadas | **Pendiente** (F2) | Se fijan en el generador, dentro del modelo de permisos |
 | H-19 | Dos relojes | Resuelto de otro modo | Un `Clock` inyectable; el JWT usa tiempo real (ADR 0006) |
@@ -69,20 +71,24 @@ El fichero `F0-hallazgos.md` se retira de esta rama (sigue en `f0-diseno`). Esta
 | H-32 | Desnormalizaciones de documentos | Descartado | No existen `knowledge_bases` ni `document_versions` |
 | H-33 | Tarifas de IA | Descartado | No hay precios |
 
+## Decisiones del propietario (aplicadas)
+1. **READ y DOWNLOAD juntos**: confirmado. COM001 descarga D11 y D15/D18/D21/D24.
+2. **No se añade `get_expenses`**: confirmado. Gastos y facturas por chat solo vía RAG sobre D07, D12 y D13.
+3. **Importes únicos**: sin desglose de impuestos; `expenses.amount` (7.250 € en octubre) e `invoices.amount`.
+4. **Historial de chat**: se guarda sin caducidad y sin job de retención. *Decisión por defecto, reversible* (si se quiere retención, bastaría un job y un campo de caducidad).
+5. **JWT con refresh token**: confirmado, con rotación y revocación de la familia ante reutilización ([ADR 0007](adr/0007-sesiones-jwt-refresh-rotativo.md)).
+
 ## Pendientes para el propietario
-1. **READ y DOWNLOAD unidos**: ¿se acepta que COM001 descargue D11 y la actividad comercial? Si no, habría que añadir una columna `download_roles` o una excepción en la regla.
-2. **Gastos y facturas por chat**: ¿suficiente con los documentos (RAG) o se añade una quinta herramienta `get_expenses`? (Cambia el alcance aprobado de 4 herramientas, por eso no se ha hecho.)
-3. **Escala del dataset (H-02)**: ¿150-300 pólizas incluyen cartera previa o son altas? Afecta a objetivos y A4.
-4. **Retención del historial de chat (H-13)** y **base o total del gasto (H-16)**: confirmar o aplazar.
-5. **JWT sin refresh**: ¿vale una sesión corta con nuevo login, o se quiere refresh con rotación (mejora opcional)?
+1. **Escala del dataset (H-02)**: ¿150-300 pólizas incluyen cartera previa o son altas? Sin resolver; afecta a objetivos y A4. Se fija en F2 cuando el propietario lo aclare.
 
 ## Validaciones
-Realizadas el 2026-11-05 con scripts auxiliares no versionados (en el espacio de trabajo de la tarea, no en el repo):
-- **DDL** ([schema.md](data-model/schema.md)) en un PostgreSQL 16 temporal (initdb propio, sin tocar clústeres existentes, eliminado al terminar): 28 sentencias, **11 tablas**, 17 `CREATE INDEX` explícitos (40 índices en total con PK y UNIQUE) y 56 CHECK creados sin errores.
-- **Números ancla de octubre** con datos de prueba: 12 pólizas, 9.680,00 € de primas, 968,00 € de comisiones de empleado (`kind = 'ACCRUAL'`), 7.250,00 € de gastos, 12.000,00 € de objetivos, cumplimientos 105,0 / 76,0 / 73,2 / 68,8 % y 80,7 % total, por empleado 3.150 / 2.280 / 2.050 / 2.200 €. Una póliza de septiembre cancelada en octubre (con su `CLAWBACK`) no altera esas cifras.
-- **14 restricciones negativas** rechazadas por la BD: documento sin MANAGER, `RESTRICTED` con EMPLOYEE, KB-Empleados con EMPLOYEE o sin propietario, rol inexistente, `INDEXED` sin id de Dify, comisión de empleado y del asegurador mal calculadas, `CANCELLED` sin fecha, gasto `PAYROLL`, periodo no mensual, rol de usuario inválido, total de gasto incoherente, `sources` que no es array.
-- **Matriz**: se sembraron los 32 documentos desde [permissions-spec.yaml](data-model/permissions-spec.yaml) y la consulta `rol = ANY(allowed_roles) OR owner_id = usuario` dio **0 diferencias** con el oráculo Python (DIR001 32 documentos, ACC001 14, COM001 13, cada EMPLOYEE 10; 99 celdas READ permitidas de 224). **42** casos negativos explícitos dan DENY; las 36 combinaciones EMP↔EMP, ACC→Dirección y contratos/nóminas, COM→D01-D05 y contratos/nóminas, y EMP→Dirección/Finanzas dan DENY; los positivos de COM001 (D06, D11, D15, D18, D21, D24) dan ALLOW.
-- **Mermaid**: `mermaid_check.py` sobre `docs/`: **11 de 11 bloques OK** (tras corregir un `;` en un mensaje de secuencia).
-- **Enlaces internos** (incluidas anclas) comprobados con un script: sin rotos. Búsqueda de términos obsoletos (54 tablas, 9 KBs, Modulith, grants, F6-F9, H-xx): solo aparecen como histórico explícito («reemplaza…», «versión F0») o en esta página.
+Realizadas con scripts auxiliares no versionados (en el espacio de trabajo de la tarea, no en el repo); segunda pasada tras aplicar las decisiones del propietario:
+- **DDL** ([schema.md](data-model/schema.md)) en un PostgreSQL 16 temporal (initdb propio, sin tocar clústeres existentes, eliminado al terminar): 32 sentencias, **12 tablas**, 20 `CREATE INDEX` explícitos (45 índices con PK y UNIQUE) y 54 CHECK creados sin errores. No existe ninguna columna de desglose de impuestos.
+- **Números ancla de octubre** con datos de prueba: 12 pólizas, 9.680,00 € de primas, 968,00 € de comisiones de empleado (`kind = 'ACCRUAL'`), **7.250,00 € de gastos (suma de `expenses.amount`)**, 12.000,00 € de objetivos, cumplimientos 105,0 / 76,0 / 73,2 / 68,8 % y 80,7 % total; por empleado 3.150 / 2.280 / 2.050 / 2.200 €. Una póliza de septiembre cancelada en octubre (con su `CLAWBACK`) no altera esas cifras.
+- **18 restricciones negativas** rechazadas por la BD (documento sin MANAGER, `RESTRICTED` con EMPLOYEE, KB-Empleados con EMPLOYEE o sin propietario, rol inexistente, `INDEXED` sin id de Dify, comisiones mal calculadas, `CANCELLED` sin fecha, gasto `PAYROLL`, periodo no mensual, rol de usuario inválido, gasto negativo, `sources` no array, y para `refresh_tokens`: `token_hash` duplicado, caducado al emitirse, `replaced_by` sin `revoked_at`, usuario inexistente).
+- **Refresh en SQL**: rotación (la fila usada queda revocada con `replaced_by` y misma `family_id`) y revocación de toda la familia ante reutilización: 0 tokens activos tras el escenario. Es una prueba del modelo de datos, **no** de la lógica de la aplicación (que no existe aún).
+- **Matriz**: 32 documentos sembrados desde [permissions-spec.yaml](data-model/permissions-spec.yaml); la consulta `rol = ANY(allowed_roles) OR owner_id = usuario` dio **0 diferencias** con el oráculo Python (DIR001 32, ACC001 14, COM001 13, cada EMPLOYEE 10; 99 celdas permitidas de 224). Con el oráculo sobre las 1.344 celdas usuario × documento × acción: READ y DOWNLOAD idénticos en todas; COM001 tiene READ y DOWNLOAD en D06, D11, D15, D18, D21, D24 y DENY en D01-D05, contratos y nóminas; ACC001 y EMP001 cumplen sus positivos. 42 casos negativos explícitos dan DENY, así como las 36 combinaciones EMP↔EMP, ACC→Dirección y contratos/nóminas, COM→D01-D05 y contratos/nóminas, EMP→Dirección/Finanzas. Ningún caso negativo contradice READ+DOWNLOAD.
+- **Mermaid**: `mermaid_check.py` sobre `docs/`: **11 de 11 bloques OK**.
+- **Enlaces internos** (incluidas anclas): 59 comprobados, 0 rotos. Búsqueda de términos obsoletos (11 tablas, «JWT sin refresh», impuestos, `get_expenses` como pendiente, 54 tablas, Modulith, F6-F9): solo aparecen como histórico explícito o como decisión tomada.
 
-**No verificado:** la API real de Dify 1.18 (filtros de metadatos, `retrieve`); las conversaciones ajenas y el alcance `OWN/TEAM` de las herramientas (se definen en el diseño, se probarán con el código en F1-F3); rendimiento con volumen; recall y citas (no existe aún el conjunto de evaluación); la sintaxis Mermaid se comprobó con el parser de Mermaid 11 vía navegador headless, no con el visor de GitHub.
+**No verificado:** la API real de Dify 1.18 (filtros de metadatos, `retrieve`); las conversaciones ajenas, el alcance `OWN/TEAM` de las herramientas y toda la lógica de sesión (rotación, cookie, logout) en código: se definen en el diseño y se probarán en F1-F3; rendimiento con volumen; recall y citas (no existe aún el conjunto de evaluación); la sintaxis Mermaid se comprobó con el parser de Mermaid 11 en navegador headless, no con el visor de GitHub.

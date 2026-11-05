@@ -31,7 +31,7 @@ flowchart BT
 |---|---|---|---|
 | `shared` | `Clock` inyectable, errores RFC 7807, ID de correlación, `Money` | — | `Clock`, `Money`, `CorrelationId` |
 | `audit` | Registro de auditoría (solo metadatos) | `audit_logs` | `AuditPublisher.record(...)` |
-| `auth` | Login, JWT, `Subject` (usuario, rol), **`AccessPolicyService`** | `users` | `AccessPolicyService`, `Subject` |
+| `auth` | Login, JWT + refresh rotativo, `Subject` (usuario, rol), **`AccessPolicyService`** | `users`, `refresh_tokens` | `AccessPolicyService`, `Subject` |
 | `documents` | Documentos, MinIO, preview PDF/Excel, descarga, estado de indexación | `documents` | `DocumentService` (listar, leer, descargar, subir), evento `DocumentChanged` |
 | `data` | Clientes, pólizas, comisiones, finanzas, objetivos; consultas con alcance | `customers`, `policies`, `commissions`, `invoices`, `expenses`, `sales_targets` | `SalesQuery`, `CommissionQuery`, `PolicyQuery`, `TargetQuery` (alimentan dashboard y herramientas) |
 | `ai` | `AiGateway` (puerto) + adaptador Dify, indexador, orquestador de chat, perfil del asistente, conversaciones | `conversations`, `messages` | `POST /api/v1/chat`, `AiGateway` |
