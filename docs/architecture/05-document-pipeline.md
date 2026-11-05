@@ -1,88 +1,62 @@
-# 05 · Pipeline de documentos: tres almacenes
+# 05 · Pipeline de documentos
 
 | Almacén | Qué guarda | Rol | Quién lo escribe |
 |---|---|---|---|
-| **PostgreSQL** | Metadatos, versiones, checksum, clasificación, propietario, grants, estado de indexación, auditoría | **Fuente de verdad**. Aquí se decide y se registra todo | Módulo `documents` |
-| **MinIO** | Binario original de cada versión (inmutable) | Almacén de contenido; bucket privado, acceso solo del backend | Módulo `documents` |
-| **Dify** | Texto troceado, embeddings y metadatos de recuperación | Copia **derivada y reconstruible** para búsqueda | Adaptador Dify del módulo `ai` |
+| **PostgreSQL** | Metadatos, `allowed_roles`, propietario, checksum, estado de indexación | **Fuente de verdad** | Paquete `documents` |
+| **MinIO** | Binario original (bucket privado) | Contenido | Paquete `documents` |
+| **Dify** | Texto troceado, embeddings y metadatos de recuperación | Copia **derivada y reconstruible** | Paquete `ai` (indexador) |
 
-Decisiones y reglas: [ADR 0004](../adr/0004-pipeline-tres-almacenes.md). Esta página muestra las vistas.
+Decisiones: [ADR 0004](../adr/0004-pipeline-simplificado.md).
 
-## Subida y indexación
+## Subida e indexación
 ```mermaid
 sequenceDiagram
   autonumber
-  participant U as Usuario con CREATE/UPDATE
+  participant U as MANAGER
   participant DOC as documents
   participant M as MinIO
   participant PG as PostgreSQL
-  participant OB as Outbox
-  participant AI as ai (adaptador Dify)
+  participant AI as ai (indexador)
   participant D as Dify
 
   U->>DOC: subir fichero (multipart)
-  DOC->>DOC: validar MIME real, tamaño y extensión, calcular SHA-256
-  DOC->>M: PUT objeto inmutable documents/docId/vN/sha256
-  DOC->>PG: INSERT documents + document_versions (scan PENDING, index PENDING) + grants iniciales + outbox
-  DOC->>DOC: escaneo antivirus de la versión
-  alt limpio
-    DOC->>PG: scan_status CLEAN, outbox DocumentIndexRequested
-    OB->>AI: entrega at-least-once
-    AI->>M: leer objeto (vía documents API)
-    AI->>D: crear o actualizar documento con metadatos
-    AI->>PG: estado INDEXING con dify_document_id
-    loop sondeo de estado de indexación
-      AI->>D: indexing-status
-    end
-    AI->>PG: estado INDEXED, indexed_version_id, indexed_at
-  else infectado
-    DOC->>PG: scan_status INFECTED, nunca se indexa
+  DOC->>DOC: validar MIME real, tamaño y extensión; SHA-256
+  DOC->>M: PUT objeto documents/docId/sha256
+  DOC->>PG: INSERT documents (index_status PENDING)
+  DOC-->>AI: evento DocumentChanged
+  AI->>D: crear documento en el dataset de su KB con metadatos
+  AI->>PG: INDEXING con dify_document_id
+  loop sondeo
+    AI->>D: indexing-status
   end
+  AI->>PG: INDEXED, indexed_at
 ```
+La carga inicial (seed de F2/F3) usa el mismo camino por un comando de administración.
 
-## Máquina de estados de `documents.index_status`
+## Estados de `documents.index_status`
 ```mermaid
 stateDiagram-v2
-  [*] --> PENDING: alta o nueva versión limpia
-  PENDING --> INDEXING: el worker toma el evento
+  [*] --> PENDING: alta
+  PENDING --> INDEXING: el indexador toma el documento
   INDEXING --> INDEXED: Dify completa
-  INDEXING --> FAILED: error o timeout agotado
-  FAILED --> PENDING: reintento con backoff o manual
-  INDEXED --> PENDING: nueva versión, cambio de KB, reindexado
-  INDEXED --> INDEXED: cambio de metadatos sin reindexar
-  PENDING --> [*]: borrado antes de indexar
-  INDEXED --> [*]: borrado confirmado en Dify
-  FAILED --> [*]: borrado
+  INDEXING --> FAILED: error o timeout
+  FAILED --> PENDING: reintento manual o del job
+  INDEXED --> PENDING: reindexado o cambio de metadatos
 ```
-Los cuatro estados son los del brief. El escaneo (`scan_status`), el borrado (`deleted_at`) y la sincronía de metadatos (`dify_metadata_synced`) son campos aparte para no mezclar ejes.
+Cuatro estados. El borrado es `deleted_at` aparte (no es un estado).
 
-## Qué se propaga a Dify y qué no
-| Evento | PostgreSQL | MinIO | Dify |
-|---|---|---|---|
-| Nueva versión | nueva fila `document_versions`; `current_version_id` | objeto nuevo, el anterior se conserva | actualizar por fichero; estado vuelve a `PENDING` |
-| Cambio de **grants** (alta, baja, caducidad) | `document_permissions` | — | **nada**: los grants no viven en Dify; la re-autorización en consulta los aplica al instante |
-| Cambio de clasificación, propietario o categoría | `documents` | — | actualizar metadatos (`dify_metadata_synced=false` hasta confirmar); mientras tanto manda la re-autorización |
-| Cambio de KB | `documents` | — | borrar en dataset origen y crear en destino (nuevo `dify_document_id`) |
-| Borrado | `deleted_at` inmediato (invisible ya) | retención y purga diferida | borrar documento; reintento hasta confirmar |
-| Reindexado manual | — | — | recrear; estado `PENDING` |
+## Qué se propaga a Dify
+| Evento | PostgreSQL | Dify |
+|---|---|---|
+| Alta | fila `PENDING` | crear documento con metadatos |
+| Cambio de `allowed_roles`, `owner_id`, KB o clasificación | `documents` | actualizar metadatos (o reindexar); **mientras tanto manda la re-autorización** |
+| Borrado | `deleted_at` inmediato (ya invisible en listados, citas y recuperación) | borrar documento (reintento en el job) |
+| Reindexado | `PENDING` | recrear |
 
-## Borrado seguro (orden)
-```mermaid
-flowchart LR
-  A["1 soft delete en PostgreSQL<br/>desaparece de listados, citas y retrieval"] --> B["2 outbox DocumentDeleted"]
-  B --> C["3 borrar en Dify con reintentos"]
-  C --> D["4 reconciliación confirma ausencia"]
-  D --> E["5 purga en MinIO tras el periodo de retención"]
-```
-Un fragmento devuelto por Dify cuyo `document_id` está borrado o no mapea a `documents.id` se **descarta** (fallo cerrado).
+Un fragmento devuelto por Dify cuyo `document_id` no mapea a un documento vivo se **descarta** (fallo cerrado).
 
-## Reconciliación
-Job periódico (también bajo demanda) que compara `documents` con la lista de documentos de cada dataset de Dify:
-- En Dify y no en BD, o borrado en BD → borrar en Dify (huérfano).
-- En BD `INDEXED` y ausente en Dify → `PENDING`.
-- `indexed_version_id <> current_version_id` → `PENDING`.
-- `dify_metadata_synced=false` con antigüedad > umbral → reenviar metadatos.
-Cada ejecución deja un resumen en `audit_logs` (contadores, sin contenido).
+## Job de reintento
+Cada pocos minutos: documentos `FAILED` o `PENDING` antiguos pasan por el indexador; borrados lógicos aún presentes en Dify se eliminan. Sin outbox, sin reconciliación completa (mejora opcional).
 
-## Prueba de integridad (CA-8 y F3)
-`checksum_sha256` en `documents` debe igualar el de `current_version_id`; el objeto de MinIO debe hashear a ese valor. Un test recorre los tres almacenes del dataset sembrado y comprueba la coherencia.
+## Prueba de integridad
+`checksum_sha256` en `documents` debe igualar el hash del objeto en MinIO. Un test recorre el dataset sembrado y comprueba la coherencia.

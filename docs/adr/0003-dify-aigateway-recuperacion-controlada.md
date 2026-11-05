@@ -1,36 +1,36 @@
 # ADR 0003 — Dify detrás de `AiGateway`, con recuperación controlada por el backend
 
-Estado: propuesto (F0)
+Estado: aceptado (revisado en la rama `simple`: un asistente, 4 KBs, sin precios ni cuota). Mantiene la decisión de F0 y la simplifica.
 
 ## Contexto
-Dify 1.18 ofrece Knowledge API (`/datasets/...`, incluida la recuperación) y apps de chat (`/chat-messages`) sobre Gemini. Podría recuperar y generar dentro de un chatflow, pero con streaming el backend **no puede retirar** lo ya emitido: es detección, no prevención. Los principios 1, 5, 6, 9 y 12 del brief exigen que el backend decida y que el contenido recuperado se trate como dato no confiable.
+Dify 1.18 ofrece Knowledge API (`/datasets/...`, incluida la recuperación) y apps de chat (`/chat-messages`) sobre Gemini. Podría recuperar y generar dentro de un chatflow, pero con streaming el backend **no puede retirar** lo ya emitido: es detección, no prevención. El backend debe decidir y el contenido recuperado es dato no confiable.
 
 ## Decisión
-1. **Puerto `ai.AiGateway`** con adaptador Dify (`WebClient` + Resilience4j). Operaciones: `plan(...)`, `retrieve(datasetIds, query, filter, topK)`, `generate(context, history, stream)`, `indexDocument(...)`, `updateMetadata(...)`, `deleteDocument(...)`, `indexingStatus(...)`. El resto del sistema solo conoce este puerto; cambiarlo (p. ej. Spring AI + pgvector) no toca dominio.
-2. **Recuperación controlada por el backend**: el backend llama a la Knowledge API de Dify con filtro de metadatos (optimización) y **re-autoriza cada fragmento** con `AccessPolicyService` antes de que llegue al LLM (ADR 0002). La app de generación de Dify **no tiene nodo de conocimiento**: recibe solo el contexto ya autorizado.
-3. **Contexto no confiable**: los fragmentos y resultados de herramientas se envían delimitados y marcados como datos; el LLM no tiene herramientas de escritura; el sistema no ejecuta instrucciones halladas en documentos (criterio 9).
-4. **Dos llamadas por turno** (H-10): planificación (una app de Dify sin conocimiento que devuelve JSON con herramientas y parámetros tipados, validado contra `ai_tools`) y generación (`chat-messages`). Se suman sus tokens en el mensaje.
-5. **Identidad hacia Dify**: `user` = `users.dify_user_ref` (`u_<uuid>` opaco, estable, distinto de `users.id`; sin email ni nombre). Aísla historiales de Dify; **no autoriza**.
-6. **Conversaciones**: `conversations` propia es la fuente de verdad y el propietario se comprueba ahí; `dify_conversation_id` es solo el vínculo. Una conversación ajena ⇒ 404 sin consultar a Dify.
-7. **Claves**: dos distintas (app y Knowledge) más la de Gemini, solo en el backend/gestor de secretos; `ai_assistants.dify_app_alias` guarda un alias, no la clave.
-8. **Citas**: `metadata.retriever_resources` → mapear `document_id` de Dify a `documents.id` y comprobar READ de nuevo antes de enviar la cita; guardar en `message_sources` (referencias, no texto).
-9. **Costes**: `metadata.usage` → tokens por mensaje; el precio lo calcula SegurPlus con `ai_model_prices` vigente; cuota diaria por usuario (fecha de negocio).
-10. **Fallos**: conexión 3 s, primera respuesta 10 s, inactividad 30-60 s, tope 120 s; reintentos solo antes del primer token; circuit breaker y bulkhead por destino; modelo de reserva configurable (Gemini devuelve 503 por alta demanda). Si el stream solo emite `ping`: revisar worker/Celery/Redis.
-11. **Verificación y SSE**: ver H-11; por defecto, respuestas con cifras de SQL se verifican antes de emitirse.
-
-Variante A (recuperar dentro del chatflow con filtros por `inputs`): **rechazada por defecto**; solo con decisión explícita y su propio ADR.
+1. **Puerto `ai.AiGateway`** con adaptador Dify (`WebClient`). Operaciones: `plan`, `retrieve(datasetIds, query, filter, topK)`, `generate(context, history)`, `indexDocument`, `updateMetadata`, `deleteDocument`, `indexingStatus`. Cambiar Dify (p. ej. Spring AI + pgvector) no toca el resto.
+2. **Cuatro bases de conocimiento**: KB-General (empresa + seguros), KB-Direccion, KB-Finanzas, KB-Empleados (un único dataset con metadato `owner_id`).
+3. **Un solo asistente**: el perfil (KBs por rol, alcance de herramientas) está en configuración YAML. El backend deriva del rol del JWT qué KBs consulta; el cliente no elige KB ni asistente.
+4. **Recuperación controlada**: el backend llama a la Knowledge API con filtro de metadatos (`allowed_roles`/`owner_id`; optimización) y **re-autoriza cada fragmento** con `AccessPolicyService` antes de que llegue al LLM. La app de generación no tiene nodo de conocimiento: recibe solo contexto ya autorizado.
+5. **Contexto no confiable**: fragmentos y resultados de herramientas se envían delimitados y marcados como datos; el LLM no tiene herramientas de escritura.
+6. **Dos llamadas por turno**: planificación (app sin conocimiento que devuelve JSON con herramientas y parámetros tipados, validado contra el catálogo de 4) y generación (`chat-messages`).
+7. **Identidad hacia Dify**: `user` = `users.dify_user_ref` (`u_<uuid>` opaco). Aísla historiales; **no autoriza**.
+8. **Conversaciones**: la tabla propia es la fuente de verdad; ajena ⇒ 404 sin consultar a Dify.
+9. **Claves**: la de app y la de Knowledge solo en el backend; nunca en el frontend.
+10. **Citas**: `metadata.retriever_resources` → `documents.id` → comprobar READ de nuevo antes de enviarlas; se guardan referencias en `messages.sources`.
+11. **Métricas**: `metadata.usage` → `tokens_in`/`tokens_out` y latencia por mensaje. Sin precios, sin cuota.
+12. **Fallos**: timeouts 3 s / 10 s / 30 s / 120 s; un reintento solo antes del primer token. Resilience4j y modelo de reserva quedan como mejora opcional.
+13. **Sin reranking ni búsqueda híbrida obligatorios** (mejora opcional si la evaluación lo justifica).
 
 ## Alternativas
 | Alternativa | Por qué no |
 |---|---|
-| Chatflow con recuperación interna (Variante A) | No hay prevención con streaming; el control queda en Dify |
-| Un app/dataset de Dify por usuario | Duplica prompts y configuración; contradice A6 |
-| Spring AI + pgvector directamente | Quita Dify del stack y de la demostración; el puerto lo deja abierto |
-| Llamar a Gemini directo desde el backend | Reimplementa troceado, indexación y recuperación; se pierde el valor de Dify |
+| Chatflow con recuperación interna | No hay prevención con streaming; el control queda en Dify |
+| Un dataset por empleado (versión F0) | 4 datasets extra para lo que resuelve un filtro `owner_id` + re-autorización |
+| Spring AI + pgvector | Quita Dify del stack y de la demostración; el puerto lo deja abierto |
+| Gemini directo desde el backend | Reimplementa troceado, indexación y recuperación |
 
 ## Consecuencias
-- (+) El LLM solo ve texto autorizado: aunque el filtro de Dify falle, no hay fuga. El fallo cerrado (fragmento sin mapeo ⇒ descartar) protege frente a desincronización de índices.
-- (+) Testeable con WireMock: se puede devolver el corpus entero y comprobar que sobrevive solo lo autorizado.
-- (−) Latencia extra por la llamada de planificación y la re-autorización (una consulta por lote).
-- (−) Acoplamiento a la forma de la API de Dify (parámetros de `retrieve`, filtros de metadatos): **no verificado en F0** (se comprueba en el Swagger de la instancia en F4).
-- (−) El filtro de Dify puede devolver menos de `topK` útiles tras descartar; se pide un `topK` mayor y se recorta tras autorizar.
+- (+) El LLM solo ve texto autorizado: aunque el filtro de Dify falle, no hay fuga (fallo cerrado).
+- (+) Testeable con WireMock devolviendo el corpus entero.
+- (−) Latencia extra por la planificación y la re-autorización (una consulta por lote).
+- (−) Con un único dataset de empleados, si el filtro `owner_id` no funciona en Dify 1.18, la recuperación devuelve fragmentos ajenos que se descartan y puede quedar sin resultados útiles (**riesgo de recall, no de fuga**). Se comprueba en F3; plan B: pedir `topK` mayor o un dataset por empleado.
+- (−) Acoplamiento a la forma de la API de Dify: **no verificada**; se comprueba en el Swagger de la instancia en F3.

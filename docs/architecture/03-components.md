@@ -1,116 +1,69 @@
-# 03 · Componentes: módulos Spring Modulith
+# 03 · Componentes: cinco paquetes por funcionalidad
 
-Paquete por módulo: `com.segurplus.<modulo>/{api,application,domain,infrastructure}`. Un módulo solo usa la API pública (raíz o `api`) de otro. Se verifica con `ApplicationModules.verify()` y reglas ArchUnit (ADR 0001).
+Un único módulo Maven/Spring Boot. Paquetes bajo `com.segurplus`: `auth`, `documents`, `ai`, `data`, `audit` y `shared`. Sin Spring Modulith ([ADR 0001](../adr/0001-paquetes-por-funcionalidad.md)).
 
 ## Dependencias permitidas
-`A --> B` significa «A puede usar la API pública de B». El grafo es **acíclico**; los ciclos naturales se rompen con eventos o con puertos (SPI) definidos en el módulo de menor nivel.
+`A --> B` significa «A puede usar los servicios públicos de B». El grafo es **acíclico**. Todos pueden usar `shared`.
 
 ```mermaid
 flowchart BT
   shared["shared"]
   audit["audit"]
-  users["users"]
-  departments["departments"]
-  security["security"]
   auth["auth"]
   documents["documents"]
-  customers["customers"]
-  insurance["insurance"]
-  sales["sales"]
-  hr["hr"]
-  finance["finance"]
-  analytics["analytics"]
+  data["data"]
   ai["ai"]
 
   audit --> shared
-  users --> shared
-  departments --> users
-  security --> users
-  security --> departments
-  security --> audit
-  auth --> users
-  auth --> security
   auth --> audit
-  documents --> security
-  documents --> departments
+  documents --> auth
   documents --> audit
-  customers --> security
-  customers --> departments
-  customers --> audit
-  insurance --> customers
-  insurance --> security
-  sales --> customers
-  sales --> insurance
-  sales --> security
-  sales --> departments
-  hr --> departments
-  hr --> security
-  hr --> audit
-  finance --> sales
-  finance --> insurance
-  finance --> customers
-  finance --> hr
-  finance --> security
-  analytics --> sales
-  analytics --> customers
-  analytics --> insurance
-  analytics --> finance
-  analytics --> hr
-  analytics --> security
+  data --> auth
+  data --> audit
+  ai --> auth
   ai --> documents
-  ai --> analytics
-  ai --> security
-  ai --> users
+  ai --> data
   ai --> audit
 ```
-(Todos los módulos pueden usar además `shared`; se omite para legibilidad. La flecha a `audit` se omite en los módulos de dominio que solo publican eventos de auditoría vía `shared`/`audit.api`.)
 
-## Responsabilidades y tablas propias
-| Módulo | Responsabilidad | Tablas (ver schema.md) | API pública destacada |
+## Responsabilidades y tablas
+| Paquete | Responsabilidad | Tablas | API pública destacada |
 |---|---|---|---|
-| `shared` | Kernel: `BusinessClock`/`SystemClock`, `Money`, IDs, errores RFC 7807, outbox | `outbox_events` | `Money`, `CorrelationId`, `OutboxPublisher` |
-| `audit` | Registro de auditoría append-only (solo metadatos) | `audit_logs` | `AuditPublisher.record(AuditEvent)` |
-| `users` | Usuarios, roles, permisos de datos | `users`, `roles`, `permissions`, `user_roles`, `role_permissions` | `UserDirectory`, `RoleCatalog` |
-| `departments` | Estructura organizativa y empleados | `departments`, `employees` | `EmployeeDirectory` (incluye «equipo» de un responsable) |
-| `security` | `AccessPolicyService` (ABAC), contexto, SPI de recursos | — (la política es código; los datos están en `users` y en cada módulo) | `AccessPolicyService`, SPI `ResourceAccessProvider` |
-| `auth` | Login, JWT, refresh con rotación | `refresh_tokens` | endpoints `/api/v1/auth/*` |
-| `documents` | Documentos, versiones, grants, KBs, MinIO, estados de indexación | `document_classifications`, `document_categories`, `knowledge_bases`, `documents`, `document_versions`, `document_permissions` | `DocumentQueryService`, `DocumentIndexingApi`, eventos `Document*` |
-| `ai` | `AiGateway` (puerto) + adaptador Dify, orquestador de chat, asistentes, conversaciones, costes, evaluación | `ai_tools`, `ai_assistants`, `ai_assistant_knowledge_bases`, `ai_assistant_tools`, `conversations`, `messages`, `message_sources`, `message_tool_calls`, `ai_model_prices`, `ai_evaluation_*` | `POST /api/v1/chat`, `AiGateway` |
-| `analytics` | Servicios de consulta con alcance; dashboards; **fuente única** de las herramientas SQL | (vistas, sin tablas propias) | `SalesAnalytics`, `CommissionAnalytics`, `PolicyAnalytics`, `ObjectiveAnalytics`, `FinanceAnalytics`, `PeriodComparison` |
-| `customers` | Clientes | `customers` | `CustomerQueryService` |
-| `insurance` | Aseguradoras, productos, pólizas, coberturas, renovaciones, cancelaciones | `insurance_*`, `policies`, `policy_*` | `PolicyIssuer`, `PolicyQueryService` |
-| `sales` | Leads, oportunidades, ventas, actividades | `leads`, `opportunities`, `sales`, `sales_activities` | `SaleRegistry`, evento `SaleConfirmed` |
-| `finance` | Libro mayor, facturas, pagos, gastos, comisiones | `accounting_*`, `expense_categories`, `expenses`, `invoices`, `insurer_commissions`, `payments`, `commissions` | `LedgerPoster`, `CommissionCalculator` |
-| `hr` | Contratos, nóminas, objetivos, evaluaciones, ausencias | `employment_contracts`, `payroll_runs`, `payroll`, `sales_targets`, `performance_reviews`, `leave_requests` | `TargetQuery`, SPI `CommissionTotalsProvider`, evento `PayrollApproved` |
+| `shared` | `Clock` inyectable, errores RFC 7807, ID de correlación, `Money` | — | `Clock`, `Money`, `CorrelationId` |
+| `audit` | Registro de auditoría (solo metadatos) | `audit_logs` | `AuditPublisher.record(...)` |
+| `auth` | Login, JWT, `Subject` (usuario, rol), **`AccessPolicyService`** | `users` | `AccessPolicyService`, `Subject` |
+| `documents` | Documentos, MinIO, preview PDF/Excel, descarga, estado de indexación | `documents` | `DocumentService` (listar, leer, descargar, subir), evento `DocumentChanged` |
+| `data` | Clientes, pólizas, comisiones, finanzas, objetivos; consultas con alcance | `customers`, `policies`, `commissions`, `invoices`, `expenses`, `sales_targets` | `SalesQuery`, `CommissionQuery`, `PolicyQuery`, `TargetQuery` (alimentan dashboard y herramientas) |
+| `ai` | `AiGateway` (puerto) + adaptador Dify, indexador, orquestador de chat, perfil del asistente, conversaciones | `conversations`, `messages` | `POST /api/v1/chat`, `AiGateway` |
 
-## Cómo se rompen los ciclos
-| Ciclo aparente | Solución |
-|---|---|
-| `documents` ↔ `ai` (indexar en Dify vs. citar documentos) | `documents` publica eventos (`DocumentIndexRequested`, `DocumentDeleted`, `DocumentMetadataChanged`) y expone `DocumentIndexingApi`; `ai` los consume y llama a la API. `documents` no conoce a `ai`. |
-| `security` ↔ `documents` (la política necesita atributos y grants) | `security` define el SPI `ResourceAccessProvider` (qué grants/atributos aplican y cómo se traducen a `Specification`); `documents` lo implementa. `security` no depende de `documents`. |
-| `sales` ↔ `insurance` | `sales` llama a `PolicyIssuer` de `insurance`; `insurance` no conoce `sales` (guarda `sale_id` como identificador). |
-| `finance` ↔ `hr` | `finance` depende de `hr` (tasa de comisión del contrato; SPI `CommissionTotalsProvider` implementado en `finance`); `hr` publica `PayrollApproved` y `finance` contabiliza la línea agregada «Sueldos y salarios» (A5). |
+## Convención interna de cada paquete
+```
+com.segurplus.<paquete>/
+  api/        controladores REST + DTOs (nunca entidades)
+  ...         servicios, entidades y repositorios (repositorios no públicos)
+```
+
+## Cómo se evita el ciclo documents ↔ ai
+`documents` publica un evento de aplicación `DocumentChanged` (alta, cambio de metadatos, borrado) y expone `DocumentService`. `ai` lo escucha para indexar en Dify y consulta `DocumentService` para re-autorizar fragmentos. `documents` no conoce a `ai`.
 
 ## Componente central: política de acceso
 ```mermaid
 flowchart LR
   REST["Controladores REST"] --> APS
-  TOOLS["Herramientas IA tipadas"] --> APS
+  TOOLS["4 herramientas tipadas"] --> APS
   RAG["Re-autorización de fragmentos"] --> APS
-  subgraph APS["AccessPolicyService (security)"]
-    CTX["SubjectContext desde JWT<br/>usuario, roles, depto, clearance, empleado"]
-    DEC["decide(subject, resource, action, context)"]
-    SPEC["toSpecification(subject, tipo, action)"]
-    FLT["toMetadataFilter(subject, assistantContext)"]
+  subgraph APS["AccessPolicyService (auth)"]
+    CTX["Subject desde el JWT<br/>usuario, rol"]
+    DEC["decide(subject, documento, acción)"]
+    SPEC["toSpecification(subject)"]
+    SCOPE["scopeFor(subject, herramienta)"]
   end
-  DEC --> SPI["ResourceAccessProvider<br/>implementado por cada módulo dueño"]
-  SPEC --> SPI
   APS --> AUD["audit.AuditPublisher"]
 ```
-Reglas de evaluación, traducción a JPA `Specification` y a filtros de metadatos de Dify: [ADR 0002](../adr/0002-abac-access-policy-service.md).
+Reglas: [ADR 0002](../adr/0002-abac-access-policy-service.md).
 
-## Reglas de verificación (tests de arquitectura)
-- `ApplicationModules.of(SegurPlusApplication.class).verify()` sin ciclos ni accesos a `infrastructure` ajena.
-- Ninguna clase fuera de `shared` usa `Instant.now()`, `LocalDate.now()` o `Clock.systemUTC()` directamente (ADR 0006).
-- Los controladores solo devuelven DTOs; ninguna entidad JPA en `api`.
-- Ningún repositorio de `documents`, `customers`, `sales`, `finance`, `hr` es público: las consultas con alcance pasan por servicios que aceptan un `SubjectContext`.
+## Reglas de verificación (tests; ArchUnit opcional)
+- Sin ciclos entre paquetes y sin acceso a repositorios de otro paquete.
+- Ninguna clase fuera de `shared` usa `Instant.now()`, `LocalDate.now()` ni `Clock.systemUTC()` directamente (ADR 0006).
+- Los controladores solo devuelven DTOs.
+- Los repositorios de `documents` y `data` no son públicos: las consultas con alcance pasan por servicios que reciben un `Subject`.

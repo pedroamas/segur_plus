@@ -1,6 +1,6 @@
 # 01 · Contexto del sistema
 
-SegurPlus es un corredor/mediador de seguros online ficticio (A1). Siete usuarios, cuatro roles, cuatro asistentes de IA.
+SegurPlus es un corredor/mediador de seguros online ficticio (A1). Siete usuarios, cuatro roles, un asistente de IA.
 
 ```mermaid
 flowchart LR
@@ -11,27 +11,25 @@ flowchart LR
     EMP["EMP001-EMP004 Comerciales<br/>rol EMPLOYEE"]
   end
 
-  SP["SegurPlus<br/>portal + API + asistentes de IA"]
+  SP["SegurPlus<br/>portal + API + asistente de IA"]
 
   DIFY["Dify 1.18<br/>Knowledge API y chat-messages"]
   GEM["Gemini<br/>LLM y embeddings, vía Dify"]
-  AV["Antivirus / escáner de ficheros<br/>ClamAV o equivalente"]
 
   DIR --> SP
   ACC --> SP
   COM --> SP
   EMP --> SP
-  SP -->|"HTTPS, claves solo en backend"| DIFY
+  SP -->|"HTTP, claves solo en backend"| DIFY
   DIFY --> GEM
-  SP -->|"escaneo previo a indexar"| AV
 ```
 
 ## Fronteras de confianza
 | Frontera | Qué cruza | Control |
 |---|---|---|
-| Navegador → backend | JWT de acceso (10-15 min), refresh en cookie HttpOnly | Spring Security; identidad solo del JWT; se ignoran `employee_id`, `role`, `assistantId`, `datasetId` del cliente |
-| Backend → Dify | consultas con filtros de metadatos, contexto delimitado, `user` opaco `u_<uuid>` | claves de app y Knowledge solo en backend; fragmentos re-autorizados al volver |
+| Navegador → backend | JWT de acceso | Spring Security; identidad solo del JWT; se ignoran `employee_id`, `role`, `assistantId`, `datasetId` del cliente |
+| Backend → Dify | consultas con filtros de metadatos, contexto delimitado, `user` opaco `u_<uuid>` | clave de Dify solo en backend; fragmentos re-autorizados al volver |
 | Backend → MinIO | objetos privados | solo el backend tiene credenciales; descargas auditadas |
-| Contenido de documentos → LLM | texto no confiable | delimitado, sin herramientas de escritura, corpus de prompt injection (criterio 9) |
+| Contenido de documentos → LLM | texto no confiable | delimitado, sin herramientas de escritura, pruebas de prompt injection (F5) |
 
-Fuera del sistema (no existen en SegurPlus): aseguradoras con integración real, pasarela de pago, siniestros. Las aseguradoras son datos de catálogo (`insurance_companies`).
+Fuera del sistema: aseguradoras con integración real, pasarela de pago, siniestros. La aseguradora es un texto en la póliza.
