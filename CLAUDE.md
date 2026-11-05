@@ -35,12 +35,21 @@ Reglas simples: dependencias sin ciclos (`ai → documents, data, auth, audit`; 
 - Preguntar antes de cambiar el alcance, el modelo de permisos o un supuesto del brief.
 - Mantener la simplicidad: no añadir tablas, paquetes ni herramientas fuera del alcance sin preguntar.
 
-## Comandos (completar al crear el proyecto)
+## Comandos
 ```
-./mvnw verify                  # tests backend
-docker compose up -d           # stack local (postgres, minio, dify, backend, frontend)
-npm run dev | build | test     # frontend
+# infraestructura local (PostgreSQL :5434, MinIO :9000/:9001); secretos en deploy/.env (copiar de .env.example)
+mkdir -p deploy/data/postgres deploy/data/minio        # solo la primera vez
+docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d
+docker compose -f deploy/docker-compose.yml --env-file deploy/.env down
+
+# backend (desde backend/; API en :8100, OpenAPI en /swagger-ui.html)
+set -a; . ../deploy/.env; set +a && ./mvnw spring-boot:run
+./mvnw verify                  # tests: JUnit, Testcontainers (PostgreSQL y MinIO), ArchUnit; requiere Docker (si hace falta: sg docker -c "./mvnw verify")
+./mvnw test -Dtest=PermissionsMatrixTest                # matriz usuario x documento (224 celdas) contra el oráculo del YAML
+
+npm run dev | build | test     # frontend (F4)
 ```
+Detalle: `backend/README.md`.
 
 ## Definición de hecho
 Código + tests (unitarios, integración y autorización) + OpenAPI actualizada + ADR si hubo decisión + CI verde.
