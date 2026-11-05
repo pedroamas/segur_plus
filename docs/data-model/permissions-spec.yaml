@@ -1,0 +1,67 @@
+# Especificación declarativa de la matriz de permisos (fuente: docs/security/permissions-matrix.md).
+# Es DATO, no código: de aquí se generan (a) las filas de document_permissions de la siembra y
+# (b) la matriz esperada usuario x documento x acción para los tests de autorización (CA-2).
+# Si se edita la matriz en Markdown, hay que editar este fichero y viceversa (se comprueba en F1).
+version: 1
+classification_rank: {PUBLIC: 1, INTERNAL: 2, CONFIDENTIAL: 3, RESTRICTED: 4}
+actions: [READ, CREATE, UPDATE, DELETE, DOWNLOAD, ADMINISTER]
+abbrev: {R: [READ], RD: [READ, DOWNLOAD]}      # abreviaturas usadas en 'grants'
+roles:                                          # clearance_level por rol (H-03)
+  MANAGER: RESTRICTED
+  ACCOUNTANT: CONFIDENTIAL
+  SALES_MANAGER: CONFIDENTIAL
+  EMPLOYEE: INTERNAL
+users:                                          # usuario -> rol, empleado, departamento
+  DIR001: {role: MANAGER,       department: DIR}
+  ACC001: {role: ACCOUNTANT,    department: CONT}
+  COM001: {role: SALES_MANAGER, department: COM}
+  EMP001: {role: EMPLOYEE,      department: COM, manager: COM001}
+  EMP002: {role: EMPLOYEE,      department: COM, manager: COM001}
+  EMP003: {role: EMPLOYEE,      department: COM, manager: COM001}
+  EMP004: {role: EMPLOYEE,      department: COM, manager: COM001}
+# Acciones CREATE/UPDATE/DELETE/ADMINISTER: no se materializan como grants por documento (H-05);
+# salen de role_permissions (resource_type DOCUMENT, scope GLOBAL), por defecto solo MANAGER.
+role_document_permissions:
+  MANAGER: [CREATE, UPDATE, DELETE, ADMINISTER]
+# grants: rol -> acciones concedidas como filas ROLE en document_permissions.
+# owner: empleado propietario (owner_employee_id); la regla de propietario da READ y DOWNLOAD (H-04).
+documents:
+  - {code: D01, kb: MANAGEMENT, cls: CONFIDENTIAL, cat: MANAGEMENT_REPORT,     owner: null, grants: {MANAGER: RD}}
+  - {code: D02, kb: MANAGEMENT, cls: RESTRICTED,   cat: BUDGET,                owner: null, grants: {MANAGER: RD}}
+  - {code: D03, kb: MANAGEMENT, cls: CONFIDENTIAL, cat: KPI,                   owner: null, grants: {MANAGER: RD}}
+  - {code: D04, kb: MANAGEMENT, cls: RESTRICTED,   cat: STRATEGY,              owner: null, grants: {MANAGER: RD}}
+  - {code: D05, kb: MANAGEMENT, cls: RESTRICTED,   cat: MINUTES,               owner: null, grants: {MANAGER: RD}}
+  - {code: D06, kb: SALES,      cls: CONFIDENTIAL, cat: SALES_REPORT,          owner: null, grants: {MANAGER: RD, SALES_MANAGER: RD}}
+  - {code: D07, kb: FINANCE,    cls: CONFIDENTIAL, cat: INVOICES,              owner: null, grants: {MANAGER: RD, ACCOUNTANT: RD}}
+  - {code: D08, kb: FINANCE,    cls: CONFIDENTIAL, cat: LEDGER,                owner: null, grants: {MANAGER: RD, ACCOUNTANT: RD}}
+  - {code: D09, kb: FINANCE,    cls: CONFIDENTIAL, cat: BANK_STATEMENT,        owner: null, grants: {MANAGER: RD, ACCOUNTANT: RD}}
+  - {code: D10, kb: FINANCE,    cls: CONFIDENTIAL, cat: RECONCILIATION,        owner: null, grants: {MANAGER: RD, ACCOUNTANT: RD}}
+  - {code: D11, kb: FINANCE,    cls: CONFIDENTIAL, cat: COMMISSION_STATEMENT,  owner: null, grants: {MANAGER: RD, ACCOUNTANT: RD, SALES_MANAGER: R}}
+  - {code: D12, kb: FINANCE,    cls: CONFIDENTIAL, cat: EXPENSES,              owner: null, grants: {MANAGER: RD, ACCOUNTANT: RD}}
+  - {code: D13, kb: FINANCE,    cls: CONFIDENTIAL, cat: CLOSING_REPORT,        owner: null, grants: {MANAGER: RD, ACCOUNTANT: RD}}
+  # Por empleado: contrato / actividad comercial / nómina y comisiones (orden de la matriz; H-01).
+  - {code: D14, kb: EMP001, cls: RESTRICTED,   cat: CONTRACT,            owner: EMP001, grants: {MANAGER: RD}}
+  - {code: D15, kb: EMP001, cls: CONFIDENTIAL, cat: COMMERCIAL_ACTIVITY, owner: EMP001, grants: {MANAGER: RD, SALES_MANAGER: R}}
+  - {code: D16, kb: EMP001, cls: RESTRICTED,   cat: PAYSLIP,             owner: EMP001, grants: {MANAGER: RD}}
+  - {code: D17, kb: EMP002, cls: RESTRICTED,   cat: CONTRACT,            owner: EMP002, grants: {MANAGER: RD}}
+  - {code: D18, kb: EMP002, cls: CONFIDENTIAL, cat: COMMERCIAL_ACTIVITY, owner: EMP002, grants: {MANAGER: RD, SALES_MANAGER: R}}
+  - {code: D19, kb: EMP002, cls: RESTRICTED,   cat: PAYSLIP,             owner: EMP002, grants: {MANAGER: RD}}
+  - {code: D20, kb: EMP003, cls: RESTRICTED,   cat: CONTRACT,            owner: EMP003, grants: {MANAGER: RD}}
+  - {code: D21, kb: EMP003, cls: CONFIDENTIAL, cat: COMMERCIAL_ACTIVITY, owner: EMP003, grants: {MANAGER: RD, SALES_MANAGER: R}}
+  - {code: D22, kb: EMP003, cls: RESTRICTED,   cat: PAYSLIP,             owner: EMP003, grants: {MANAGER: RD}}
+  - {code: D23, kb: EMP004, cls: RESTRICTED,   cat: CONTRACT,            owner: EMP004, grants: {MANAGER: RD}}
+  - {code: D24, kb: EMP004, cls: CONFIDENTIAL, cat: COMMERCIAL_ACTIVITY, owner: EMP004, grants: {MANAGER: RD, SALES_MANAGER: R}}
+  - {code: D25, kb: EMP004, cls: RESTRICTED,   cat: PAYSLIP,             owner: EMP004, grants: {MANAGER: RD}}
+  - {code: D26, kb: INSURANCE, cls: INTERNAL, cat: INSURANCE_MANUAL, owner: null, grants: {MANAGER: RD, ACCOUNTANT: RD, SALES_MANAGER: RD, EMPLOYEE: RD}}
+  - {code: D27, kb: INSURANCE, cls: INTERNAL, cat: INSURANCE_MANUAL, owner: null, grants: {MANAGER: RD, ACCOUNTANT: RD, SALES_MANAGER: RD, EMPLOYEE: RD}}
+  - {code: D28, kb: INSURANCE, cls: INTERNAL, cat: INSURANCE_MANUAL, owner: null, grants: {MANAGER: RD, ACCOUNTANT: RD, SALES_MANAGER: RD, EMPLOYEE: RD}}
+  - {code: D29, kb: INSURANCE, cls: INTERNAL, cat: INSURANCE_MANUAL, owner: null, grants: {MANAGER: RD, ACCOUNTANT: RD, SALES_MANAGER: RD, EMPLOYEE: RD}}
+  - {code: G01, kb: COMPANY, cls: INTERNAL, cat: COMPANY_POLICY, owner: null, grants: {MANAGER: RD, ACCOUNTANT: RD, SALES_MANAGER: RD, EMPLOYEE: RD}}
+  - {code: G02, kb: COMPANY, cls: INTERNAL, cat: COMPANY_POLICY, owner: null, grants: {MANAGER: RD, ACCOUNTANT: RD, SALES_MANAGER: RD, EMPLOYEE: RD}}
+  - {code: G03, kb: COMPANY, cls: INTERNAL, cat: COMPANY_POLICY, owner: null, grants: {MANAGER: RD, ACCOUNTANT: RD, SALES_MANAGER: RD, EMPLOYEE: RD}}
+# Asistentes -> ai_assistants + ai_assistant_knowledge_bases + ai_assistant_tools
+assistants:
+  management: {role: MANAGER,       type: MANAGEMENT, kbs: [MANAGEMENT, SALES, FINANCE, INSURANCE, COMPANY, {selector: ALL_EMPLOYEE_KBS}], tool_scope: GLOBAL}
+  accounting: {role: ACCOUNTANT,    type: ACCOUNTING, kbs: [COMPANY, FINANCE, INSURANCE], tool_scope: FINANCE_NO_INDIVIDUAL_PAYROLL}
+  sales:      {role: SALES_MANAGER, type: SALES,      kbs: [COMPANY, INSURANCE, SALES, {selector: ALL_EMPLOYEE_KBS, category: COMMERCIAL_ACTIVITY}], tool_scope: TEAM}
+  employee:   {role: EMPLOYEE,      type: EMPLOYEE,   kbs: [COMPANY, INSURANCE, {selector: OWN_EMPLOYEE_KB}], tool_scope: OWN}
