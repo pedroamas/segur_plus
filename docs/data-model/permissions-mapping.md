@@ -40,9 +40,9 @@ Sin grants, sin clearance y sin reglas de contexto. La clasificación es informa
 | NEG-10 | Metadatos de Dify obsoletos (índice con `allowed_roles` antiguo) | RAG | fragmento descartado en la re-autorización |
 | NEG-11 | Cruces: EMP↔EMP, ACC↔DIR, COM↔DIR | cualquier canal | ningún dato |
 | NEG-12 | MANAGER → conversación de otro usuario | REST | 404 |
-| POS-01 | Controles positivos: DIR001 lee todo; COM001 lee D06, D11, D15, D18, D21, D24; EMP001 lee D14-D16; ACC001 lee D07-D13 | REST | ALLOW |
+| POS-01 | Controles positivos (READ y DOWNLOAD): DIR001 todo; COM001 D06, D11, D15, D18, D21, D24; EMP001 D14-D16; ACC001 D07-D13 | REST | ALLOW |
 
-(La matriz anterior tenía un caso «COM001 no descarga D15»; desaparece al unir READ y DOWNLOAD. Ver DECISIONES.)
+Decidido: READ y DOWNLOAD van juntos. La matriz de F0 tenía un caso «COM001 no descarga D15»; ya no existe y ningún caso negativo lo contradice. POS-01 cubre READ **y** DOWNLOAD de COM001 sobre D06, D11, D15, D18, D21, D24.
 
 ## 5. Alcance de las herramientas SQL
 `OWN` = `employee_id = JWT`; `TEAM` = los usuarios con rol EMPLOYEE (los 4 comerciales); `GLOBAL` = sin filtro; `AGGREGATE` = solo totales, sin desglose por empleado.
@@ -72,4 +72,4 @@ Ninguna herramienta expone `users.monthly_salary` ni acepta `employee_id` como p
 5. **Mutaciones**: quitar un rol de `allowed_roles` ⇒ DENY en todos los canales sin reindexar; cambiar `owner_id` ⇒ la celda se mueve de empleado.
 6. **Invariantes de BD**: los intentos de violar los CHECK (documento sin MANAGER, `RESTRICTED` con EMPLOYEE, KB-Empleados con EMPLOYEE) son rechazados.
 
-Esta lógica se validó ya en F0-simple con PostgreSQL 16 (la consulta de la sección 1 contra el oráculo del YAML: 0 diferencias; 99 celdas READ permitidas de 224; 42 casos negativos denegados).
+Esta lógica se validó ya en F0-simple con PostgreSQL 16 (la consulta de la sección 1 contra el oráculo del YAML: 0 diferencias; 99 celdas permitidas de 224, idénticas para READ y DOWNLOAD; casos negativos denegados).

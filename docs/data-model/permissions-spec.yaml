@@ -2,8 +2,15 @@
 # Es DATO, no código: de aquí se generan (a) la siembra de documents.allowed_roles/owner_id y
 # (b) la matriz esperada usuario x documento x acción para los tests de autorización (CA-1).
 # Regla: READ/DOWNLOAD si rol in allowed_roles o owner == usuario; CREATE/UPDATE/DELETE/ADMINISTER solo MANAGER.
-version: 2
+# Decidido por el propietario: READ y DOWNLOAD van juntos (misma condición). No hay casos «lee pero no descarga».
+version: 3
+read_equals_download: true
 actions: [READ, DOWNLOAD, CREATE, UPDATE, DELETE, ADMINISTER]
+# Controles positivos obligatorios (READ y DOWNLOAD)
+positive_cases:
+  - {user: COM001, docs: [D06, D11, D15, D18, D21, D24]}
+  - {user: ACC001, docs: [D07, D08, D09, D10, D11, D12, D13]}
+  - {user: EMP001, docs: [D14, D15, D16]}
 manager_only_actions: [CREATE, UPDATE, DELETE, ADMINISTER]
 users:
   DIR001: {role: MANAGER,       department: DIRECCION}

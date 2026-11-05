@@ -39,7 +39,7 @@ Convenciones: `R` = READ, `D` = DOWNLOAD, `—` = sin acceso. Cualquier acceso n
 
 Notas:
 - Resultado por rol sobre READ/DOWNLOAD: MANAGER 32 documentos; ACCOUNTANT 14 (D07-D13 y los 7 generales); SALES_MANAGER 13 (D06, D11, D15, D18, D21, D24 y los 7 generales); cada EMPLOYEE 10 (sus 3 propios y los 7 generales).
-- **Consecuencia de unir READ y DOWNLOAD**: SALES_MANAGER puede *descargar* D11 y la actividad comercial, no solo leerlos (en la matriz anterior solo tenía READ). El visor ya entrega el fichero completo al navegador, así que la diferencia era de trazabilidad, no una barrera técnica. Decisión del propietario si se quiere volver a separar: [DECISIONES](../DECISIONES.md#pendientes-para-el-propietario).
+- **READ y DOWNLOAD van juntos (decidido por el propietario)**: quien puede leer un documento puede descargarlo. En particular SALES_MANAGER puede **leer y descargar** D11 y la actividad comercial D15, D18, D21 y D24. No existe ningún caso negativo «lee pero no descarga».
 - D11 contiene comisiones de **todos**: un empleado no lo lee (ve las suyas en su nómina y con la herramienta `get_commissions`, alcance propio).
 - Un empleado nunca ve documentos de otro empleado, aunque sean del mismo departamento.
 
@@ -62,6 +62,7 @@ Se comprueban en REST, listados, recuperación RAG, citas, herramientas y conver
 - ACC001 → D02, D04, D05, contrato y nómina de cualquier empleado (D14-D25): denegado.
 - ACC001 → salarios individuales por chat o SQL: sin datos (no existe herramienta que los devuelva).
 - COM001 → D01-D05 y contratos/nóminas: denegado.
+- Control positivo: COM001 → D06, D11, D15, D18, D21, D24 en READ **y** DOWNLOAD: permitido (200).
 - Cualquiera → documento con ID modificado en la URL: 404.
 - Cualquiera → petición con `employee_id`/`role`/`assistantId` ajeno: se ignora; el resultado es el del JWT.
 - Rol retirado de `allowed_roles` (o cambio de propietario) → el documento deja de aparecer en listados, citas y recuperación, sin reindexar.

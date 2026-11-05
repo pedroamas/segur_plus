@@ -71,7 +71,7 @@ Cifras ancla (octubre 2026): 12 pólizas vendidas, 9.680 € de primas, 968 € 
 | ID | Caso de uso | Aceptación | RF | CA |
 |---|---|---|---|---|
 | UC-30 | Ver rendimiento del equipo (D06) y objetivos | alcance TEAM; 80,7 % global | RF-02, RF-10 | 1, 7 |
-| UC-31 | Revisar actividad comercial (D15, D18, D21, D24) y comisiones (D11) | permitido por `allowed_roles`; contratos y nóminas ⇒ DENY (NEG-06) | RF-03, RF-09 | 1, 2 |
+| UC-31 | Revisar actividad comercial (D15, D18, D21, D24) y comisiones (D11) | READ **y** DOWNLOAD permitidos por `allowed_roles` (D06, D11, D15, D18, D21, D24); contratos y nóminas ⇒ DENY (NEG-06) | RF-03, RF-09 | 1, 2 |
 
 ### 4.4 EMP001..EMP004 — Comerciales (EMPLOYEE)
 | ID | Caso de uso | Aceptación | RF | CA |

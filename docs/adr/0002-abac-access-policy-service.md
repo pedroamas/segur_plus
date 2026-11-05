@@ -52,5 +52,5 @@ La matriz esperada se genera de [permissions-spec.yaml](../data-model/permission
 - (+) Una regla de una línea, un sitio, un oráculo de tests simple.
 - (+) Quitar un rol de `allowed_roles` o cambiar el propietario surte efecto al instante, sin reindexar (el control está en la BD).
 - (−) Sin reglas de contexto (descargas masivas, horario): mejora opcional, no necesaria para el portfolio.
-- (−) READ y DOWNLOAD van unidos: quien lee puede descargar (ver DECISIONES).
+- (−) READ y DOWNLOAD van unidos (decidido): quien lee puede descargar.
 - (−) No hay caducidad ni revocación por usuario individual: solo por rol y propietario.
