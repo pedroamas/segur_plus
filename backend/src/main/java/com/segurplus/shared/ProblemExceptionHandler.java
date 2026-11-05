@@ -9,6 +9,8 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
@@ -32,6 +34,17 @@ class ProblemExceptionHandler extends ResponseEntityExceptionHandler {
         ProblemDetail pd = Problems.of(HttpStatus.PAYLOAD_TOO_LARGE, "payload-too-large",
                 "The uploaded file exceeds the maximum allowed size.", null);
         return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(pd);
+    }
+
+    /** Un ID con formato inválido en la ruta (p. ej. un UUID alterado) responde el mismo 404 que un recurso inexistente. */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    ResponseEntity<ProblemDetail> handleTypeMismatch(MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
+        if (ex.getParameter().hasParameterAnnotation(PathVariable.class)) {
+            return handleApi(ApiException.notFound(), request);
+        }
+        ProblemDetail pd = Problems.of(HttpStatus.BAD_REQUEST, "bad-request", "Invalid value for parameter '" + ex.getName() + "'.",
+                request.getRequestURI());
+        return ResponseEntity.badRequest().body(pd);
     }
 
     @ExceptionHandler(Exception.class)
