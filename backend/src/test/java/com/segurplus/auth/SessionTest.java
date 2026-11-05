@@ -223,4 +223,23 @@ class SessionTest extends IntegrationTest {
                 + "." + Base64.getUrlEncoder().withoutPadding().encodeToString(("{\"sub\":\"" + java.util.UUID.randomUUID() + "\",\"role\":\"MANAGER\"}").getBytes(StandardCharsets.UTF_8)) + ".";
         mvc.perform(get("/api/v1/users/me").header("Authorization", "Bearer " + none)).andExpect(status().isUnauthorized());
     }
+
+    @Test
+    void concurrentRefreshOfTheSameTokenYieldsExactlyOneRotation() throws Exception {
+        Login l = login("EMP002");
+        java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(2);
+        try {
+            java.util.concurrent.CountDownLatch go = new java.util.concurrent.CountDownLatch(1);
+            List<java.util.concurrent.Future<Integer>> futures = List.of(
+                    pool.submit(() -> { go.await(); return refresh(l.refresh()).getResponse().getStatus(); }),
+                    pool.submit(() -> { go.await(); return refresh(l.refresh()).getResponse().getStatus(); }));
+            go.countDown();
+            List<Integer> statuses = List.of(futures.get(0).get(), futures.get(1).get());
+            assertThat(statuses).containsExactlyInAnyOrder(200, 401);
+            // La segunda petición se trata como reutilización: toda la familia queda revocada.
+            assertThat(jdbc.queryForObject("SELECT count(*) FROM refresh_tokens WHERE family_id = ?::uuid AND revoked_at IS NULL", Integer.class, familyOf(l.refresh()))).isZero();
+        } finally {
+            pool.shutdownNow();
+        }
+    }
 }
