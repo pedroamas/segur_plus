@@ -47,7 +47,8 @@ Leyenda de estado: **CONFIRMAR** = se aplicó una propuesta por defecto y hay qu
 ### H-01 · IDs de actividad comercial incoherentes (matriz)
 La tabla de documentos agrupa D14-16 como «contrato / actividad comercial / nómina y comisiones» (el orden de columnas implica **D14 contrato, D15 actividad, D16 nómina**; igual en D17-19, D20-22, D23-25). Pero la tabla «Asistentes y fuentes» dice que Sales usa «actividad comercial de empleados (**D16, D19, D22, D25**)», que según la primera tabla serían las **nóminas** (RESTRICTED, con salario). Los casos negativos citan «EMP001 → D17/D18/D19» como documentos de EMP002, coherente con la primera tabla.
 - Aplicado: actividad = D15, D18, D21, D24 (orden de columnas, nota «solo actividad: R» y principio de no exponer salarios a COM001). Es además la lectura que **no** concede acceso a nóminas si me equivoco.
-- Decide el propietario: confirmar la numeración o corregir la matriz. Impacto si fuera al revés: el grant `SALES_MANAGER READ` de [permissions-spec.yaml](data-model/permissions-spec.yaml) iría a otros cuatro documentos.
+- **RESUELTO (2026-11-05):** era un error de la matriz; corregida a D15, D18, D21, D24 en `permissions-matrix.md`. Numeración confirmada.
+- (Histórico) Decidía el propietario: confirmar la numeración o corregir la matriz. Impacto si fuera al revés: el grant `SALES_MANAGER READ` de [permissions-spec.yaml](data-model/permissions-spec.yaml) iría a otros cuatro documentos.
 
 ### H-02 · Escala del dataset (brief §6)
 Octubre tiene **12 ventas/pólizas**, pero se habla de «≈150-300 pólizas en total» en septiembre-diciembre, con altas, renovaciones y cancelaciones. A ~12 altas/mes salen ≈48 altas en cuatro meses.

@@ -37,7 +37,7 @@ Notas:
 |---|---|---|---|
 | Management | DIR001 | Management, Sales, Finance, Insurance, Company, KB-EMP* (RESTRICTED incluido) | Todas, alcance global |
 | Accounting | ACC001 | Company, Finance, Insurance | Finanzas globales; **sin** salarios individuales |
-| Sales | COM001 | Company, Insurance, Sales + actividad comercial de empleados (D16, D19, D22, D25) | Ventas, objetivos y comisiones del equipo |
+| Sales | COM001 | Company, Insurance, Sales + actividad comercial de empleados (D15, D18, D21, D24) | Ventas, objetivos y comisiones del equipo |
 | Employee | EMP00X | Company, Insurance, KB-EMP00X (propia) | Solo datos propios (alcance por JWT) |
 
 ## Reglas de política (ABAC)
