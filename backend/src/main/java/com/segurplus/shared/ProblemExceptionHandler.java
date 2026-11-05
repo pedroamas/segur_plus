@@ -26,9 +26,12 @@ class ProblemExceptionHandler extends ResponseEntityExceptionHandler {
                 .body(Problems.of(ex.status(), ex.code(), ex.getMessage(), request.getRequestURI()));
     }
 
-    @ExceptionHandler(MaxUploadSizeExceededException.class)
-    ResponseEntity<ProblemDetail> handleTooLarge(MaxUploadSizeExceededException ex, HttpServletRequest request) {
-        return handleApi(ApiException.payloadTooLarge("The uploaded file exceeds the maximum allowed size."), request);
+    @Override
+    protected ResponseEntity<Object> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException ex,
+            HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+        ProblemDetail pd = Problems.of(HttpStatus.PAYLOAD_TOO_LARGE, "payload-too-large",
+                "The uploaded file exceeds the maximum allowed size.", null);
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(pd);
     }
 
     @ExceptionHandler(Exception.class)
