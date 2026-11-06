@@ -1,0 +1,41 @@
+# Contenedor web de SegurPlus (F3): sirve frontend/dist por HTTPS y proxifica /api/* al backend del host (mismo origen, sin CORS).
+# Solo LAN: el puerto se publica en una IP concreta (WEB_BIND_IP), nunca en 0.0.0.0, y NO debe abrirse en el router.
+{
+	admin off
+	auto_https disable_redirects
+	skip_install_trust
+	servers {
+		protocols h1 h2
+	}
+	# Los clientes no envían SNI cuando se conectan por IP, y dentro del contenedor la IP local no es la de la LAN.
+	default_sni {$WEB_HOST}
+}
+
+https://{$WEB_HOST}:5174 {
+	# CA local de Caddy: el navegador mostrará un aviso por el certificado propio (se acepta una vez).
+	tls internal
+
+	encode zstd gzip
+
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy no-referrer
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+	}
+
+	# API: flush_interval -1 envía cada fragmento al instante (preparado para el SSE del chat de F5).
+	handle /api/* {
+		reverse_proxy host.docker.internal:8100 {
+			flush_interval -1
+		}
+	}
+
+	# SPA: cualquier ruta que no sea un fichero cae en index.html (React Router).
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

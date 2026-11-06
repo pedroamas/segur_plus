@@ -1,6 +1,6 @@
-# Infraestructura local de SegurPlus (F1): PostgreSQL 16 + MinIO. El backend se ejecuta fuera (./mvnw spring-boot:run).
+# Infraestructura local de SegurPlus (F1): PostgreSQL 16 + MinIO, y (F3) el contenedor web con Caddy. El backend se ejecuta fuera (java -jar / ./mvnw spring-boot:run).
 # Secretos: deploy/.env (no versionado; plantilla en ../.env.example). Datos: deploy/data/ (en .gitignore).
-# Puertos en 127.0.0.1 (no expuestos a la red): PostgreSQL 5434, MinIO API 9000, consola 9001.
+# Puertos en 127.0.0.1 (no expuestos a la red): PostgreSQL 5434, MinIO API 9000, consola 9001. El frontend (web) va en la IP de la LAN, 5174.
 name: segurplus
 
 services:
@@ -35,4 +35,24 @@ services:
       - "127.0.0.1:9001:9001"
     volumes:
       - ./data/minio:/data
+    restart: unless-stopped
+
+  # F3: frontend por HTTPS solo en la LAN (https://192.168.0.28:5174). Caddy sirve frontend/dist (npm run build) y proxifica /api/*
+  # al backend que corre en el host (:8100). Publicado SOLO en WEB_BIND_IP; no abrir este puerto en el router.
+  web:
+    image: caddy:2-alpine
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    environment:
+      WEB_HOST: ${WEB_BIND_IP:-192.168.0.28}
+      XDG_DATA_HOME: /data
+      XDG_CONFIG_HOME: /data/config
+    ports:
+      - "${WEB_BIND_IP:-192.168.0.28}:5174:5174"
+    command: ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ../frontend/dist:/srv:ro
+      - ./data/caddy:/data          # CA local (se conserva entre reinicios: el navegador solo acepta el aviso una vez)
     restart: unless-stopped
