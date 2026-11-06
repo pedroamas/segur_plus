@@ -37,6 +37,28 @@ def esc(t: str) -> str:
     return str(t).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
+def _glue_headings(story):
+    """Agrupa cada encabezado (h1/h2) con el siguiente bloque de contenido para que nunca quede huérfano al pie de página."""
+    out, i = [], 0
+    while i < len(story):
+        it = story[i]
+        if isinstance(it, Paragraph) and it.style.name in ("h1", "h2") and i + 1 < len(story):
+            group = [it]
+            i += 1
+            while i < len(story) and isinstance(story[i], Paragraph) and story[i].style.name in ("h1", "h2"):
+                group.append(story[i])
+                i += 1
+            if i < len(story):
+                nxt = story[i]
+                group.extend(nxt._content if isinstance(nxt, KeepTogether) else [nxt])
+                i += 1
+            out.append(KeepTogether(group))
+        else:
+            out.append(it)
+            i += 1
+    return out
+
+
 class _Numbered(rl_canvas.Canvas):
     """Canvas en dos pasadas para «Página x de y»; hereda `invariant` del documento."""
     meta: dict = {}
@@ -71,8 +93,17 @@ class _Numbered(rl_canvas.Canvas):
         self.line(18 * mm, 15 * mm, w - 18 * mm, 15 * mm)
         self.setFillColor(GREY)
         self.setFont("Helvetica", 7.5)
-        self.drawString(18 * mm, 10.5 * mm, m.get("footer_left", ""))
-        self.drawRightString(w - 18 * mm, 10.5 * mm, f"Página {self._pageNumber} de {total}")
+        right = f"Página {self._pageNumber} de {total}"
+        left = m.get("footer_left", "")
+        disclaimer = " · Documento ficticio de SegurPlus"
+        if left.endswith(disclaimer):  # el aviso va en una segunda línea para que la primera nunca se recorte
+            left = left[: -len(disclaimer)]
+            self.drawString(18 * mm, 7 * mm, disclaimer.lstrip(" ·"))
+        room = (w - 36 * mm) - self.stringWidth(right, "Helvetica", 7.5) - 6 * mm
+        while left and self.stringWidth(left, "Helvetica", 7.5) > room:
+            left = left[:-2].rstrip() + "…" if not left.endswith("…") else left[:-2] + "…"
+        self.drawString(18 * mm, 10.5 * mm, left)
+        self.drawRightString(w - 18 * mm, 10.5 * mm, right)
 
 
 class Report:
@@ -196,4 +227,4 @@ class Report:
         doc = SimpleDocTemplate(str(path), pagesize=A4, leftMargin=18 * mm, rightMargin=18 * mm, topMargin=24 * mm, bottomMargin=22 * mm,
                                 title=self.title, author=self.author, subject=self.subtitle or self.title, creator="SegurPlus generator",
                                 invariant=1)
-        doc.build(self.story, canvasmaker=_Numbered)
+        doc.build(_glue_headings(self.story), canvasmaker=_Numbered)
