@@ -13,7 +13,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-/** F2 criterio 6: {@code users.monthly_salary} no aparece en ningún DTO, endpoint ni en la documentación OpenAPI. */
+/** F2 criterio 6 (ampliado en F3 a `/dashboard`): {@code users.monthly_salary} no aparece en ningún DTO, endpoint ni en la documentación OpenAPI. */
 class MonthlySalaryNotExposedTest extends IntegrationTest {
 
     private static final List<String> USERS = List.of("DIR001", "ACC001", "COM001", "EMP001", "EMP002", "EMP003", "EMP004");
@@ -35,6 +35,7 @@ class MonthlySalaryNotExposedTest extends IntegrationTest {
             String auth = rest.bearer(user);
             List<String> bodies = new java.util.ArrayList<>();
             bodies.add(mvc.perform(get("/api/v1/users/me").header("Authorization", auth)).andReturn().getResponse().getContentAsString());
+            bodies.add(mvc.perform(get("/api/v1/dashboard").header("Authorization", auth)).andReturn().getResponse().getContentAsString());
             bodies.add(mvc.perform(get("/api/v1/documents?size=50").header("Authorization", auth)).andReturn().getResponse().getContentAsString());
             for (UUID id : jdbc.queryForList("SELECT id FROM documents", UUID.class)) {
                 bodies.add(mvc.perform(get("/api/v1/documents/" + id).header("Authorization", auth)).andReturn().getResponse().getContentAsString());
