@@ -1,6 +1,6 @@
 # SegurPlus — convenciones del repositorio
 
-Contexto: `docs/PROJECT_BRIEF.md`. Política de acceso: `docs/security/permissions-matrix.md`. Fases: `docs/phases/` (F1-F5). Decisiones y recortes: `docs/DECISIONES.md`.
+Contexto: `docs/PROJECT_BRIEF.md`. Política de acceso: `docs/security/permissions-matrix.md`. Fases: `docs/phases/` (F1-F6). Decisiones y recortes: `docs/DECISIONES.md`.
 
 ## Stack
 Java 21, Spring Boot, Spring Security (JWT), Spring Data JPA, Flyway, WebClient (Dify), OpenAPI. React + TypeScript + React Router. PostgreSQL, MinIO, Dify (1.18), Gemini. Docker Compose. JUnit, Mockito, Spring Boot Test, Testcontainers (Postgres, MinIO), WireMock (Dify). ArchUnit opcional.
@@ -52,7 +52,7 @@ uv venv .venv && . .venv/bin/activate && uv pip install -r requirements.txt     
 python -m segurplus_gen.seed   # resetea e inserta el dataset, genera los 32 documentos, los sube a MinIO y rellena documents (idempotente)
 python -m pytest               # anclas de octubre, cifra documento = BD, determinismo, matriz de 224 celdas contra :8100
 
-npm run dev | build | test     # frontend (F4)
+npm run dev | build | test     # frontend (F3)
 ```
 Detalle: `backend/README.md` y `generator/README.md`.
 

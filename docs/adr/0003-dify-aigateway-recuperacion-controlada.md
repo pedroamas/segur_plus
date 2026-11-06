@@ -32,5 +32,5 @@ Dify 1.18 ofrece Knowledge API (`/datasets/...`, incluida la recuperación) y ap
 - (+) El LLM solo ve texto autorizado: aunque el filtro de Dify falle, no hay fuga (fallo cerrado).
 - (+) Testeable con WireMock devolviendo el corpus entero.
 - (−) Latencia extra por la planificación y la re-autorización (una consulta por lote).
-- (−) Con un único dataset de empleados, si el filtro `owner_id` no funciona en Dify 1.18, la recuperación devuelve fragmentos ajenos que se descartan y puede quedar sin resultados útiles (**riesgo de recall, no de fuga**). Se comprueba en F3; plan B: pedir `topK` mayor o un dataset por empleado.
-- (−) Acoplamiento a la forma de la API de Dify: **no verificada**; se comprueba en el Swagger de la instancia en F3.
+- (−) Con un único dataset de empleados, si el filtro `owner_id` no funciona en Dify 1.18, la recuperación devuelve fragmentos ajenos que se descartan y puede quedar sin resultados útiles (**riesgo de recall, no de fuga**). Se comprueba en F4; plan B: pedir `topK` mayor o un dataset por empleado.
+- (−) Acoplamiento a la forma de la API de Dify: **no verificada**; se comprueba en el Swagger de la instancia en F4.

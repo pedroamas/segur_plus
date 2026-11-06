@@ -1,6 +1,6 @@
-# Documentos adversariales (F5)
+# Documentos adversariales (F6)
 
-Generados por `python -m segurplus_gen.seed --adversarial-only` (o junto al seed). **No se siembran en la BD ni se suben a MinIO**: son entradas de prueba para la batería de prompt injection de F5.
+Generados por `python -m segurplus_gen.seed --adversarial-only` (o junto al seed). **No se siembran en la BD ni se suben a MinIO**: son entradas de prueba para la batería de prompt injection de F6.
 
 | Fichero | Técnica |
 |---|---|

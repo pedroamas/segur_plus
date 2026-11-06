@@ -1,6 +1,6 @@
 # Imperfecciones deliberadas (H-18)
 
-Declaradas aquí para que las pruebas de F3-F5 (recuperación, citas, evaluación) sepan qué defectos son **intencionados** y cuáles serían un fallo del dataset. Ninguna altera los números ancla de octubre de 2026 ni el modelo de permisos (`allowed_roles`, `owner` y clasificación salen de `permissions-spec.yaml`). Cada una tiene su test en `tests/test_imperfections.py`.
+Declaradas aquí para que las pruebas de F4-F6 (recuperación, citas, evaluación) sepan qué defectos son **intencionados** y cuáles serían un fallo del dataset. Ninguna altera los números ancla de octubre de 2026 ni el modelo de permisos (`allowed_roles`, `owner` y clasificación salen de `permissions-spec.yaml`). Cada una tiene su test en `tests/test_imperfections.py`.
 
 ## 1. Partidas sin conciliar (D10, con D08 y D09)
 En la conciliación bancaria de octubre (cuenta 572 a 31/10/2026) quedan tres partidas:
@@ -23,7 +23,7 @@ La cotización a cargo de la empresa de octubre (31,60 % sobre el bruto) se calc
 El presupuesto 2026 **D02** (RESTRICTED, solo MANAGER, con salarios individuales) y el cuadro de mando **D03** (CONFIDENTIAL, solo MANAGER, JSON) comparten las mismas líneas de ingresos y gastos presupuestados por categoría y mes; D03 solo recoge el personal como importe agregado. Una respuesta basada en D03 no debe revelar sueldos individuales aunque el contenido sea casi el mismo que el de D02. (Ambos son visibles solo por MANAGER, de modo que el par no abre ningún acceso nuevo.)
 
 ## 5. Documentos adversariales (fuera del corpus)
-`generator/adversarial/` contiene tres ficheros con instrucciones de *prompt injection* embebidas (texto blanco en un PDF, campo de notas de un CSV de CRM, comentario de celda y hoja oculta en un XLSX). **No se siembran en la BD ni se suben a MinIO** (lo comprueba `test_adversarial_documents_are_not_seeded`); son para la batería de F5. Detalle en `adversarial/README.md`.
+`generator/adversarial/` contiene tres ficheros con instrucciones de *prompt injection* embebidas (texto blanco en un PDF, campo de notas de un CSV de CRM, comentario de celda y hoja oculta en un XLSX). **No se siembran en la BD ni se suben a MinIO** (lo comprueba `test_adversarial_documents_are_not_seeded`); son para la batería de F6. Detalle en `adversarial/README.md`.
 
 ## Decisiones de modelado que conviene conocer (no son defectos)
 - **Ritmo de altas:** 24 (sep), **12 (oct, mes ancla)**, 56 (nov) y 72 (dic) = 164. Octubre es deliberadamente bajo (cambio de CRM y menos marketing, narrado en D01 y D05). Los objetivos de septiembre, noviembre y diciembre se calculan en proporción a las ventas del mes con cumplimientos variados (100,5 / 80,7 / 93,8 / 85,8 %).

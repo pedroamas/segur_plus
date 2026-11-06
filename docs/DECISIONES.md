@@ -16,11 +16,30 @@ Rama `simple`, creada desde `f0-diseno` (que queda intacta como referencia). El 
 | Herramientas | 10 | **4** + `search_documents` ([ADR 0005](adr/0005-herramientas-tipadas.md)) | |
 | Backend | 14 módulos con Spring Modulith | **5 paquetes** + `shared` ([ADR 0001](adr/0001-paquetes-por-funcionalidad.md)) | |
 | Frontend | 8+ pantallas | Login, Documentos, Chat, Dashboard sencillo | |
-| Fases | 10 | **5** (F1-F5) | |
+| Fases | 10 | **6** (F1-F6; ver «Cambio de orden de fases») | |
 | Criterios de aceptación | 11 | **8** | |
 | Operación | outbox, reconciliación, particionado de auditoría, triggers, `EXCLUDE`, antivirus, circuit breaker, cuota diaria | Fuera del diseño base (mejoras opcionales) | |
 
 **No se tocó (núcleo de seguridad):** identidad solo del JWT; un único `AccessPolicyService` con deny by default; 404 y listados filtrados en la consulta; re-autorización de cada fragmento antes del LLM; sin SQL libre y `employee_id` nunca como parámetro; auditoría; batería de acceso cruzado; clave de Dify solo en backend; MinIO privado vía backend. Tampoco cambian el stack, A1, A2, los 7 usuarios, los 29+3 documentos ni los números ancla de octubre.
+
+## Cambio de orden de fases (decidido por el propietario, rama `f3-frontend`)
+Orden anterior: F3 Dify y chat · F4 Frontend · F5 Seguridad y portfolio. **Orden vigente:**
+
+| Fase | Contenido | Antes |
+|---|---|---|
+| F3 | Frontend (chat visible pero «no disponible»; backend del dashboard) | F4 |
+| F4 | Dify y chat en el backend | F3 |
+| F5 | Conectar el chat del frontend (nueva, corta) | — |
+| F6 | Seguridad y portfolio | F5 |
+
+**Motivos:** (1) tener cuanto antes algo usable y demostrable por el propietario (login, dashboard, documentos con visor) sobre los datos reales de F2; (2) el frontend no depende de Dify, y Dify es la parte de mayor riesgo (API 1.18 no verificada, H-22): separarlo evita bloquear la UI; (3) al conectar el chat en una fase corta aparte (F5) se prueba el streaming sobre una UI ya estable; (4) el dashboard pasa a F3 porque sus servicios de `data` los necesita la UI primero y el chat de F4 los **reutiliza** (ADR 0005).
+
+**Decisiones asociadas (F3):**
+- El frontend se sirve por HTTPS (Caddy, `tls internal`) solo en la LAN (`https://192.168.0.28:5174`); no se expone a internet.
+- Dashboard de **ACCOUNTANT** con **gastos del mes** (suma de `expenses.amount`) y sin cumplimiento por empleado. Es un agregado solo para el dashboard: **no** se añade herramienta de gastos al chat (la decisión de «sin `get_expenses`» sigue vigente). *Pendiente de confirmar por el propietario.*
+- «Comisiones del mes»: el dato principal son las comisiones **devengadas** (`ACCRUAL`, 968,00 € en octubre, igual que los números ancla); los `CLAWBACK` del mes (negativos) se devuelven aparte junto con el neto. *Pendiente de confirmar por el propietario.*
+- Mes por defecto del dashboard: último mes cerrado respecto al `Clock` (2026-12).
+- El API de documentos no filtra por clasificación ni busca por título; la UI no lo simula.
 
 ## Consecuencias del recorte a tener presentes
 - **READ y DOWNLOAD van unidos** (decidido). SALES_MANAGER puede leer y descargar D11 y la actividad comercial (D15, D18, D21, D24).
@@ -58,7 +77,7 @@ El fichero `F0-hallazgos.md` se retira de esta rama (sigue en `f0-diseno`). Esta
 | H-19 | Dos relojes | Resuelto de otro modo | Un `Clock` inyectable; el JWT usa tiempo real (ADR 0006) |
 | H-20 | A1: el mes sale en pérdidas | **Pendiente** (informativo) | Con 9.680 € de primas los ingresos del asegurador no cubren los gastos (con las comisiones por producto del generador, 1.505,00 € en octubre frente a 7.250,00 € de gastos y 24.160,99 € de sueldos); el informe D01/D13 debe ser coherente con ello |
 | H-21 | Varios roles por usuario | Descartado | Un rol por usuario (enum) |
-| H-22 | API de Dify 1.18 no verificada | **Pendiente** (F3) | Se comprueba en el Swagger de la instancia; plan B en ADR 0003 |
+| H-22 | API de Dify 1.18 no verificada | **Pendiente** (F4) | Se comprueba en el Swagger de la instancia; plan B en ADR 0003 |
 | H-23 | Umbrales de contexto | Descartado | No hay reglas de contexto |
 | H-24 | KB-Sales con un solo documento | Descartado | No existe KB-Sales (D06 en KB-Direccion) |
 | H-25 | Grants inertes | Descartado | No hay grants |
@@ -91,4 +110,4 @@ Realizadas con scripts auxiliares no versionados (en el espacio de trabajo de la
 - **Mermaid**: `mermaid_check.py` sobre `docs/`: **11 de 11 bloques OK**.
 - **Enlaces internos** (incluidas anclas): 59 comprobados, 0 rotos. Búsqueda de términos obsoletos (11 tablas, «JWT sin refresh», impuestos, `get_expenses` como pendiente, 54 tablas, Modulith, F6-F9): solo aparecen como histórico explícito o como decisión tomada.
 
-**No verificado:** la API real de Dify 1.18 (filtros de metadatos, `retrieve`); las conversaciones ajenas, el alcance `OWN/TEAM` de las herramientas y toda la lógica de sesión (rotación, cookie, logout) en código: se definen en el diseño y se probarán en F1-F3; rendimiento con volumen; recall y citas (no existe aún el conjunto de evaluación); la sintaxis Mermaid se comprobó con el parser de Mermaid 11 en navegador headless, no con el visor de GitHub.
+**No verificado:** la API real de Dify 1.18 (filtros de metadatos, `retrieve`); las conversaciones ajenas, el alcance `OWN/TEAM` de las herramientas y toda la lógica de sesión (rotación, cookie, logout) en código: se definen en el diseño y se probarán en F1-F4; rendimiento con volumen; recall y citas (no existe aún el conjunto de evaluación); la sintaxis Mermaid se comprobó con el parser de Mermaid 11 en navegador headless, no con el visor de GitHub.

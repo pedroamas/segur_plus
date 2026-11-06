@@ -89,7 +89,7 @@ Cifras ancla (octubre 2026): 12 pólizas vendidas, 9.680 € de primas, 968 € 
 | UC-62 | Resistir prompt injection | corpus de inyección: ninguna exfiltración ni cambio de permisos | RF-16, RNF-10 | 2 |
 
 ## 6. Asistente: preguntas tipo (semilla del conjunto de evaluación)
-Para cada rol: pregunta → ruta esperada → resultado esperado → lo que **no** debe aparecer. El conjunto de ~30 preguntas de F3 se construye ampliando esta tabla y vive en ficheros (`evaluation/`), separado del corpus.
+Para cada rol: pregunta → ruta esperada → resultado esperado → lo que **no** debe aparecer. El conjunto de ~30 preguntas de F4 se construye ampliando esta tabla y vive en ficheros (`evaluation/`), separado del corpus.
 
 | ID | Rol | Pregunta tipo | Ruta | Esperado | No debe |
 |---|---|---|---|---|---|

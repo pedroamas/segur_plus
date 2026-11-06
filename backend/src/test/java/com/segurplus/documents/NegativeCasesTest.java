@@ -29,7 +29,7 @@ import org.springframework.test.web.servlet.MockMvc;
 /**
  * Casos negativos obligatorios (permissions-mapping §4) por REST: NEG-01, 02, 04, 06 (celdas usuario × documento), NEG-07
  * (ID alterado) y NEG-08 (campos de identidad del cliente). NEG-03 y NEG-12 (conversaciones) no son ejercitables en F1: las
- * conversaciones y su API pertenecen a F3 (ver informe).
+ * conversaciones y su API pertenecen a F4 (ver informe).
  */
 class NegativeCasesTest extends IntegrationTest {
 

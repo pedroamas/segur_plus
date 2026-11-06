@@ -20,7 +20,7 @@ import org.springframework.stereotype.Service;
  * </pre>
  * La misma regla se ofrece en tres formas que deben coincidir: {@link #decide} (un recurso ya cargado),
  * {@link #toSpecification} (listados y detalle: el filtro va en la consulta, no en memoria) y {@link #authorizeBatch}
- * (re-autorización de lotes de IDs, p. ej. fragmentos de Dify en F3).
+ * (re-autorización de lotes de IDs, p. ej. fragmentos de Dify en F4).
  */
 @Service
 public class AccessPolicyService {

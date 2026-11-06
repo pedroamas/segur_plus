@@ -31,7 +31,7 @@ sequenceDiagram
   end
   AI->>PG: INDEXED, indexed_at
 ```
-La carga inicial (seed de F2/F3) usa el mismo camino por un comando de administración.
+La carga inicial (seed de F2/F4) usa el mismo camino por un comando de administración.
 
 ## Estados de `documents.index_status`
 ```mermaid

@@ -31,7 +31,7 @@ Cada DENY y cada DOWNLOAD se auditan (metadatos, sin contenido).
 ### Traducción a consultas
 - **JPA `Specification`** para listados, detalle, conteos y facetas: `deletedAt IS NULL AND (:role = ANY(allowedRoles) OR ownerId = :userId)`. Una sola, para que un conteo nunca revele documentos ocultos.
 - **Datos de negocio**: `scopeFor(subject, herramienta)` devuelve `OWN` (`employee_id = :me`), `TEAM` (los usuarios con rol EMPLOYEE), `GLOBAL` o `AGGREGATE` ([permissions-mapping §5](../data-model/permissions-mapping.md)). El `employee_id` sale del `Subject`.
-- **Metadatos para Dify**: se envían `allowed_roles` y `owner_id` como metadatos del documento; el filtro de recuperación (`allowed_roles` contiene mi rol, o `owner_id` = yo) es una **cota**. Los operadores exactos de la API 1.18 no están verificados (se comprueban en F3).
+- **Metadatos para Dify**: se envían `allowed_roles` y `owner_id` como metadatos del documento; el filtro de recuperación (`allowed_roles` contiene mi rol, o `owner_id` = yo) es una **cota**. Los operadores exactos de la API 1.18 no están verificados (se comprueban en F4).
 
 ### La re-autorización es el control
 Cada fragmento devuelto por Dify se mapea a `documents.id` y pasa por `authorizeBatch(subject, READ, ids)` (una consulta con la `Specification`). Sin mapeo, borrado o no autorizado ⇒ descartado. Ver ADR 0003.

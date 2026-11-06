@@ -67,7 +67,7 @@ React + TS  →  Spring Boot (5 paquetes)  →  PostgreSQL (12 tablas: usuarios 
 7. Se guarda el mensaje (fuentes, herramientas, tokens, latencia) y la auditoría.
 
 ### Dify: detalles de integración
-- Dos claves distintas: app (`/chat-messages`) y Knowledge (`/datasets/...`). Los parámetros de `retrieve` y los operadores de filtro de metadatos de 1.18 **no están verificados**; se comprueban en el Swagger de la instancia en F3.
+- Dos claves distintas: app (`/chat-messages`) y Knowledge (`/datasets/...`). Los parámetros de `retrieve` y los operadores de filtro de metadatos de 1.18 **no están verificados**; se comprueban en el Swagger de la instancia en F4.
 - `user` de Dify: opaco y estable (`u_<uuid>`). Aísla historiales; no autoriza.
 - `conversation_id` de Dify en `conversations.dify_conversation_id`; la tabla propia es la fuente de verdad.
 - Citas: `metadata.retriever_resources` → `documents.id` y comprobación de READ antes de enviarlas.
