@@ -13,7 +13,7 @@
 - Tests: generación de la matriz usuario × documento × acción desde `permissions-spec.yaml` contra REST (listado, detalle, descarga) y los casos NEG-01, 02, 04, 06, 07, 08, 12; arquitectura (sin ciclos, sin `Instant.now()` fuera de `shared`); Testcontainers de PostgreSQL y MinIO.
 
 **Aceptación (medible)**
-1. Matriz REST: **224 celdas × acciones READ/DOWNLOAD** coinciden con el oráculo (0 diferencias); las 42 celdas negativas obligatorias dan 404.
+1. Matriz REST: **224 celdas × acciones READ/DOWNLOAD** coinciden con el oráculo (0 diferencias); las **53** celdas negativas obligatorias (pares usuario-documento distintos de NEG-01, 02, 04 y 06) dan 404.
 2. Los CHECK de `documents` rechazan: sin MANAGER en `allowed_roles`, `RESTRICTED` con EMPLOYEE, KB-Empleados con EMPLOYEE o sin propietario.
 3. Campos `employee_id`/`role` enviados por el cliente no cambian el resultado (test).
 4. Cada descarga genera una fila `DOCUMENT_DOWNLOAD`; cada DENY, `ACCESS_DENIED`.
@@ -21,3 +21,5 @@
 6. `./mvnw verify` verde.
 
 **Fuera de alcance:** datos reales, Dify, chat, frontend.
+
+**Nota (corrección en F2):** la cifra original «42 celdas negativas» no era reproducible. El cálculo literal de los casos NEG-01 (EMP001 → D17-D25: 9), NEG-02 (EMP001 → D01-D13: 13), NEG-04 (ACC001 → D01-D06 y D14-D25: 18) y NEG-06 (COM001 → D01-D05 y los 8 contratos/nóminas: 13) da **53 pares usuario-documento distintos** (sin solapes), todos 404. Comprobado contra el oráculo de `permissions-spec.yaml`: ningún par está permitido. La matriz completa (224 celdas) no cambia.
