@@ -152,7 +152,7 @@ describe('cliente HTTP: sesión y refresh', () => {
   it('los errores del API se convierten en ApiError con el detalle del problem+json', async () => {
     const f = fakeFetch({ '/documents/x': () => json({ title: 'Not Found', detail: 'The requested resource was not found.', status: 404 }, 404) })
     const api = createApiClient({ fetchImpl: f.impl })
-    const err = await api.getJson('/documents/x').catch((e) => e)
+    const err = (await api.getJson('/documents/x').catch((e: unknown) => e)) as ApiError
     expect(err).toBeInstanceOf(ApiError)
     expect(err.status).toBe(404)
     expect(err.message).toBe('The requested resource was not found.')

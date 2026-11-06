@@ -3,7 +3,7 @@ import type { Money } from './types'
 /** Solo presentación: el importe llega del API como cadena decimal. */
 export function formatMoney(m: Money | undefined): string {
   if (!m?.amount) return '—'
-  return new Intl.NumberFormat('es-ES', { style: 'currency', currency: m.currency ?? 'EUR' }).format(Number(m.amount))
+  return new Intl.NumberFormat('es-ES', { style: 'currency', currency: m.currency ?? 'EUR', useGrouping: 'always' }).format(Number(m.amount))
 }
 
 export function formatPercent(p: number | undefined | null): string {
