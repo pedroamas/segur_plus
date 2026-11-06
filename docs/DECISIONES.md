@@ -54,9 +54,9 @@ El fichero `F0-hallazgos.md` se retira de esta rama (sigue en `f0-diseno`). Esta
 | H-15 | Permisos de datos y conversaciones ajenas | Resuelto | Alcance por herramienta; conversaciones solo del propietario (ni MANAGER) |
 | H-16 | Desglose del importe de gastos | Descartado | Importe único (`amount`); no hay desglose |
 | H-17 | Factura→operación en un corredor | Resuelto | `invoices` emitidas (a la aseguradora) y recibidas (proveedores) |
-| H-18 | Imperfecciones deliberadas | **Pendiente** (F2) | Se fijan en el generador, dentro del modelo de permisos |
+| H-18 | Imperfecciones deliberadas | **Resuelto** (F2) | Declaradas en `generator/IMPERFECCIONES.md` y probadas; dentro del modelo de permisos |
 | H-19 | Dos relojes | Resuelto de otro modo | Un `Clock` inyectable; el JWT usa tiempo real (ADR 0006) |
-| H-20 | A1: el mes sale en pérdidas | **Pendiente** (informativo) | Con 9.680 € de primas los ingresos del asegurador (≈1.452 € al 15 %) no cubren los gastos; el informe D01/D13 debe ser coherente con ello |
+| H-20 | A1: el mes sale en pérdidas | **Pendiente** (informativo) | Con 9.680 € de primas los ingresos del asegurador no cubren los gastos (con las comisiones por producto del generador, 1.505,00 € en octubre frente a 7.250,00 € de gastos y 24.160,99 € de sueldos); el informe D01/D13 debe ser coherente con ello |
 | H-21 | Varios roles por usuario | Descartado | Un rol por usuario (enum) |
 | H-22 | API de Dify 1.18 no verificada | **Pendiente** (F3) | Se comprueba en el Swagger de la instancia; plan B en ADR 0003 |
 | H-23 | Umbrales de contexto | Descartado | No hay reglas de contexto |

@@ -18,3 +18,11 @@
 6. `monthly_salary` no aparece en ningún DTO, endpoint ni herramienta (test).
 
 **Fuera de alcance:** Dify y chat.
+
+## Notas de implementación (realidad frente al diseño)
+- **Volumen:** 164 altas (septiembre 24, **octubre 12**, noviembre 56, diciembre 72), dentro de las 150-300.
+- **Formatos** (el YAML no los declara): PDF 20, XLSX 6 (D02, D07, D08, D10, D11, D12), CSV 5 (D09 y la actividad comercial D15/18/21/24), JSON 1 (D03).
+- **Imperfecciones** declaradas en `generator/IMPERFECCIONES.md`; las dos versiones del informe de octubre son D13 (v1.0, borrador) y D01 (v2.0); el par casi idéntico con distinta clasificación es D02/D03.
+- **Parámetros derivados** no presentes en la BD (cotizaciones, IRPF, aportación de socios): ver `generator/README.md`.
+- **Fixtures de F1:** el seed los reemplaza; el backend no los vuelve a sembrar con `SEGURPLUS_SEED_DOCUMENTS_SPEC_PATH` vacío (valor por defecto de `.env.example`).
+- Los documentos adversariales (`generator/adversarial/`) no se siembran.

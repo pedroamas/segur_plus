@@ -15,7 +15,7 @@ set -a; . ../deploy/.env; set +a        # exporta las variables al proceso
 - Parar: `Ctrl+C` y `docker compose -f deploy/docker-compose.yml --env-file deploy/.env down` (los datos quedan en `deploy/data/`).
 - Borrar los datos locales (los crea otro uid): `docker compose ... down && docker run --rm -v "$PWD/deploy":/d postgres:16-alpine rm -rf /d/data`.
 - Usuarios semilla: `DIR001` (MANAGER), `ACC001`, `COM001`, `EMP001`-`EMP004`; contraseña = `SEGURPLUS_SEED_DEFAULT_PASSWORD`.
-  Los 32 documentos son **fixtures minúsculos** generados desde `docs/data-model/permissions-spec.yaml`, no el dataset real (F2).
+  Con `SEGURPLUS_SEED_DOCUMENTS_SPEC_PATH` informado el backend siembra 32 **fixtures minúsculos** desde `docs/data-model/permissions-spec.yaml` (solo para depurar); por defecto está vacío y los 32 documentos reales los carga `generator` (`python -m segurplus_gen.seed`, ver `generator/README.md`).
 
 ## Probar
 ```bash

@@ -48,11 +48,11 @@ Además, en el backend: `./mvnw verify` incluye `MonthlySalaryNotExposedTest` (O
 - XLSX: propiedades fijas (`created/modified`), valores en caché calculados por un evaluador propio (SUM, SUMIF, ROUND…) e inyectados junto a las fórmulas reales, y zip reescrito con orden y fechas fijas.
 - CSV/JSON: orden de filas y de claves explícitos, fin de línea `\n`.
 
-Comprobación manual:
+Comprobación manual (desde `generator/`, con el venv activo):
 ```bash
-python -m segurplus_gen.seed --files-only --out /tmp/a && sleep 2 && (cd /tmp && python -m segurplus_gen.seed --files-only --out /tmp/b) ; diff <(cd /tmp/a && sha256sum *) <(cd /tmp/b && sha256sum *) && echo IDÉNTICOS
+python -m segurplus_gen.seed --files-only --out /tmp/a && sleep 2 && python -m segurplus_gen.seed --files-only --out /tmp/b
+diff <(cd /tmp/a && sha256sum *) <(cd /tmp/b && sha256sum *) && echo IDÉNTICOS
 ```
-(ejecutar desde `generator/` con el venv activo).
 
 ## Modelo (resumen)
 - 164 altas nuevas (sep 24, **oct 12**, nov 56, dic 72), 143 clientes, comisión de empleado 10 % (`ACCRUAL`; cancelación ⇒ `CLAWBACK` en el mes de cancelación), comisión de aseguradora por producto (auto 12 %, hogar 17 %, vida 20 %, salud 15 %), facturas emitidas a las aseguradoras (devengo en el mes de venta) y recibidas de proveedores, 48 gastos y objetivos por empleado y mes. Octubre: 12 pólizas, 9.680,00 €, 968,00 €, 7.250,00 €, objetivos 12.000,00 € y cumplimientos 105,0 / 76,0 / 73,2 / 68,8 % (80,7 %).

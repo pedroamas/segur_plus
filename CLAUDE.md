@@ -47,9 +47,14 @@ set -a; . ../deploy/.env; set +a && ./mvnw spring-boot:run
 ./mvnw verify                  # tests: JUnit, Testcontainers (PostgreSQL y MinIO), ArchUnit; requiere Docker (si hace falta: sg docker -c "./mvnw verify")
 ./mvnw test -Dtest=PermissionsMatrixTest                # matriz usuario x documento (224 celdas) contra el oráculo del YAML
 
+# datos y documentos (F2; desde generator/, con el backend arrancado al menos una vez)
+uv venv .venv && . .venv/bin/activate && uv pip install -r requirements.txt     # solo la primera vez
+python -m segurplus_gen.seed   # resetea e inserta el dataset, genera los 32 documentos, los sube a MinIO y rellena documents (idempotente)
+python -m pytest               # anclas de octubre, cifra documento = BD, determinismo, matriz de 224 celdas contra :8100
+
 npm run dev | build | test     # frontend (F4)
 ```
-Detalle: `backend/README.md`.
+Detalle: `backend/README.md` y `generator/README.md`.
 
 ## Definición de hecho
 Código + tests (unitarios, integración y autorización) + OpenAPI actualizada + ADR si hubo decisión + CI verde.
