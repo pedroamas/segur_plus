@@ -43,3 +43,10 @@
 **Tests de backend:** alcance del dashboard por cada uno de los 7 usuarios, cifras de octubre, mes inválido (400), `monthly_salary` ausente (ampliando `MonthlySalaryNotExposedTest`), EMPLOYEE no ve cifras ajenas aunque envíe parámetros; ArchUnit sigue en verde.
 
 **Fuera de alcance:** diseño visual elaborado; Dify y chat real.
+
+## Notas de implementación
+- `data`: `DataScopeResolver` (único sitio rol → alcance), servicios `SalesQuery`, `CommissionQuery`, `PolicyQuery`, `TargetQuery`, `ExpenseQuery`, `DashboardService`; entidades `@Immutable` de solo lectura (incluida una vista de `users` sin `monthly_salary`). Los gastos suman solo los `APPROVED` (en los datos, todos).
+- `Money` en `shared`: importes como cadena decimal con moneda.
+- Frontend: tipos generados con `openapi-typescript` (`npm run gen:api`) y nombrados en `src/api/types.ts`; pdf.js se carga bajo demanda (chunk propio); CSP estricta en Caddy (sin `unsafe-inline`).
+- Servicio: Caddy necesita `default_sni` porque los clientes no envían SNI al conectar por IP.
+- El número de documentos por rol según el oráculo (`permissions-spec.yaml`) es DIR001 32, ACC001 14, COM001 13 y cada EMPLOYEE **10** (3 propios + 7 generales); el UI coincide.

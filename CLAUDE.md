@@ -37,7 +37,7 @@ Reglas simples: dependencias sin ciclos (`ai → documents, data, auth, audit`; 
 
 ## Comandos
 ```
-# infraestructura local (PostgreSQL :5434, MinIO :9000/:9001); secretos en deploy/.env (copiar de .env.example)
+# infraestructura local (PostgreSQL :5434, MinIO :9000/:9001, web/Caddy 192.168.0.28:5174); secretos en deploy/.env (copiar de .env.example)
 mkdir -p deploy/data/postgres deploy/data/minio        # solo la primera vez
 docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d
 docker compose -f deploy/docker-compose.yml --env-file deploy/.env down
@@ -52,7 +52,10 @@ uv venv .venv && . .venv/bin/activate && uv pip install -r requirements.txt     
 python -m segurplus_gen.seed   # resetea e inserta el dataset, genera los 32 documentos, los sube a MinIO y rellena documents (idempotente)
 python -m pytest               # anclas de octubre, cifra documento = BD, determinismo, matriz de 224 celdas contra :8100
 
-npm run dev | build | test     # frontend (F3)
+# frontend (F3; desde frontend/; detalle en frontend/README.md)
+npm run dev | build | test     # Vite :5174 (proxy /api → :8100), build a dist/, Vitest
+npm run test:e2e               # Playwright (Chrome) contra el stack vivo https://192.168.0.28:5174
+docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d web   # Caddy: dist por HTTPS solo en la LAN (no abrir el 5174 en el router)
 ```
 Detalle: `backend/README.md` y `generator/README.md`.
 

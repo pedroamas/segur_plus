@@ -1,6 +1,6 @@
 # SegurPlus backend (F1)
 
-Spring Boot 3.5 · Java 21 · PostgreSQL 16 · MinIO. Paquetes: `auth`, `documents`, `audit`, `shared` (y esqueletos `data`, `ai`).
+Spring Boot 3.5 · Java 21 · PostgreSQL 16 · MinIO. Paquetes: `auth`, `documents`, `data` (F3: servicios de lectura + dashboard), `audit`, `shared` (y esqueleto `ai`).
 
 ## Arrancar en local
 ```bash
@@ -37,6 +37,7 @@ curl -s 'localhost:8100/api/v1/documents?size=5' -H "Authorization: Bearer $TOKE
 | `POST /auth/login`, `/auth/refresh`, `/auth/logout` | público (refresh/logout: cookie `segurplus_refresh`) | rotación; reutilización ⇒ 401 y familia revocada |
 | `GET /users/me` | autenticado | identidad solo del token |
 | `GET /documents` · `/{id}` · `/{id}/view` · `/{id}/preview` · `/{id}/download` | READ/DOWNLOAD por política | no autorizado ⇒ 404; `view` solo PDF, `preview` solo XLSX |
+| `GET /dashboard?month=YYYY-MM` | cifras del mes según el **rol del token** (alcance OWN/TEAM/GLOBAL en `DataScopeResolver`); mes por defecto = último mes cerrado del `Clock`; mes sin datos ⇒ 400 | primas, comisiones (devengadas, devoluciones, neto), pólizas por estado, cumplimiento de objetivos; ACCOUNTANT: gastos y sin cumplimiento |
 | `POST /documents` (multipart) | solo MANAGER (403 al resto) | tipo real, extensión, ≤10 MB |
 
 ## Configuración relevante

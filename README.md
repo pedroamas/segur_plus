@@ -1,6 +1,6 @@
 # SegurPlus
 
-Portfolio de seguridad y autorización con RAG con permisos. Empresa ficticia de seguros (corredor), 7 usuarios, un asistente de IA que solo ve lo que el usuario puede leer. **Versión simplificada** (rama `simple`): 12 tablas, 5 paquetes, 4 bases de conocimiento, 4 pantallas, 5 fases. Estado: solo diseño, sin código.
+Portfolio de seguridad y autorización con RAG con permisos. Empresa ficticia de seguros (corredor), 7 usuarios, un asistente de IA que solo ve lo que el usuario puede leer. **Versión simplificada** (rama `simple`): 12 tablas, 5 paquetes, 4 bases de conocimiento, 4 pantallas, 6 fases. Estado: F1 (backend), F2 (datos y 32 documentos) y F3 (frontend con dashboard; chat «no disponible») implementados; Dify y el chat real llegan en F4 y F5.
 
 | Fichero | Para qué |
 |---|---|
@@ -12,6 +12,7 @@ Portfolio de seguridad y autorización con RAG con permisos. Empresa ficticia de
 | [`docs/requirements/use-cases.md`](docs/requirements/use-cases.md) | Requisitos y casos de uso |
 | [`docs/adr/`](docs/adr/) | Decisiones (ADR 0001-0007) |
 | [`docs/phases/`](docs/phases/) | F1 backend base · F2 datos y documentos · F3 frontend · F4 Dify y chat · F5 conectar el chat · F6 seguridad y portfolio |
+| [`frontend/README.md`](frontend/README.md) | Frontend: desarrollo, build, servicio HTTPS en la LAN (Caddy) y E2E |
 | [`docs/DECISIONES.md`](docs/DECISIONES.md) | Qué se recortó, por qué y qué queda pendiente |
 
 Cómo usarlo: en cada fase pide a Claude Code «ejecuta `docs/phases/F<n>-….md` respetando `CLAUDE.md` y el brief». El diseño completo anterior (54 tablas, 9 KBs, 10 fases) sigue en la rama `f0-diseno`.
