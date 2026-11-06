@@ -28,6 +28,10 @@ public class ApiException extends RuntimeException {
         return new ApiException(HttpStatus.NOT_FOUND, "not-found", "The requested resource was not found.");
     }
 
+    public static ApiException badRequest(String detail) {
+        return new ApiException(HttpStatus.BAD_REQUEST, "bad-request", detail);
+    }
+
     public static ApiException unauthorized() {
         return new ApiException(HttpStatus.UNAUTHORIZED, "unauthorized", "Authentication is required or the credentials are invalid.");
     }
