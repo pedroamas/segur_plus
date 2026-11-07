@@ -50,3 +50,4 @@
 - Frontend: tipos generados con `openapi-typescript` (`npm run gen:api`) y nombrados en `src/api/types.ts`; pdf.js se carga bajo demanda (chunk propio); CSP estricta en Caddy (sin `unsafe-inline`).
 - Servicio: Caddy necesita `default_sni` porque los clientes no envían SNI al conectar por IP.
 - El número de documentos por rol según el oráculo (`permissions-spec.yaml`) es DIR001 32, ACC001 14, COM001 13 y cada EMPLOYEE **10** (3 propios + 7 generales); el UI coincide.
+- **F3b (subida, solo MANAGER):** ver `docs/DECISIONES.md` y `frontend/README.md`. Añade `GET /api/v1/users` y `GET /api/v1/documents/upload-config` (ambos solo MANAGER).

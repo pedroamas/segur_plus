@@ -41,6 +41,13 @@ Orden anterior: F3 Dify y chat · F4 Frontend · F5 Seguridad y portfolio. **Ord
 - Mes por defecto del dashboard: último mes cerrado respecto al `Clock` (2026-12).
 - El API de documentos no filtra por clasificación ni busca por título; la UI no lo simula.
 
+## F3b — Subida de documentos desde el frontend (rama `f3b-subida`)
+- La UI de subida es solo para **MANAGER** (el botón no se pinta para otros roles; la autoridad sigue siendo el backend, que responde 403).
+- **Huecos del backend cerrados:** `GET /api/v1/users` (solo MANAGER; solo `id`, `employeeCode`, `fullName`, `role`; sin salario ni correo; 403 + `ACCESS_DENIED` para el resto) para el selector de propietario, y `GET /api/v1/documents/upload-config` (solo MANAGER; `maxBytes` y extensiones) para no duplicar en la UI los límites del servidor. El límite multipart de Spring (10 MB por archivo, 11 MB por petición) ya coincide con `segurplus.documents.max-upload-bytes` y Caddy no impone límite de cuerpo.
+- Tipos admitidos por el backend: PDF, XLSX, CSV y JSON (no solo PDF/Excel); el UI los muestra.
+- El cliente **no** replica las reglas de combinación (RESTRICTED + EMPLOYEE, KB Empleados sin propietario): se muestran los 422 del servidor, para no tener dos fuentes de verdad.
+- Pendiente (fuera de alcance): no hay endpoint de borrado ni edición de documentos; los E2E limpian por SQL/S3 directo. Un documento subido queda `index_status = PENDING` hasta F4.
+
 ## Consecuencias del recorte a tener presentes
 - **READ y DOWNLOAD van unidos** (decidido). SALES_MANAGER puede leer y descargar D11 y la actividad comercial (D15, D18, D21, D24).
 - **Sin herramienta de gastos ni facturas** (decidido: no se añade `get_expenses`). Esas preguntas se responden desde los documentos D07, D12 y D13 (RAG), no desde la BD.

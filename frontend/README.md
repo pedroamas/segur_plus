@@ -1,6 +1,6 @@
 # SegurPlus frontend (F3)
 
-React 19 · TypeScript · Vite · React Router · pdf.js. UI en español. Pantallas: Login, Panel (dashboard por rol), Documentos (listado, visor PDF, preview de Excel, descarga) y Chat (**«no disponible»**: no hace ninguna petición hasta F5).
+React 19 · TypeScript · Vite · React Router · pdf.js. UI en español. Pantallas: Login, Panel (dashboard por rol), Documentos (listado, visor PDF, preview de Excel, descarga y **subida solo para MANAGER**) y Chat (**«no disponible»**: no hace ninguna petición hasta F5).
 
 La UI **no decide permisos**: solo muestra lo que devuelve el API (404/403 ⇒ mensaje). El access JWT vive **solo en memoria**; la renovación usa la cookie HttpOnly `segurplus_refresh` (`src/api/client.ts`: un único refresh en vuelo, reintento único, cola para las peticiones concurrentes).
 
@@ -9,7 +9,7 @@ La UI **no decide permisos**: solo muestra lo que devuelve el API (404/403 ⇒ m
 cd frontend
 npm install                      # solo la primera vez
 npm run dev                      # Vite en :5174; /api se proxifica a http://localhost:8100
-npm test                         # Vitest: cliente HTTP, refresh, cola y 401 (11 tests)
+npm test                         # Vitest (jsdom en los tests de componentes): cliente HTTP, validación y diálogo de subida (30 tests)
 npm run build                    # tsc + vite build → frontend/dist
 npm run gen:api                  # regenera src/api/schema.d.ts desde http://localhost:8100/v3/api-docs (backend arrancado)
 ```
@@ -35,3 +35,8 @@ Si cambia la IP de la LAN, define `WEB_BIND_IP` en `deploy/.env`. El backend deb
 cd frontend && npm run build && npm run test:e2e
 ```
 Requiere postgres, minio, el backend en :8100 y el contenedor `web` arriba, con los datos reales de F2 (`generator`). Lee la contraseña de desarrollo de `deploy/.env` en tiempo de ejecución (no se guarda ni se imprime) y compara contra dos oráculos independientes del backend: `docs/data-model/permissions-spec.yaml` (documentos) y consultas SQL directas al contenedor de PostgreSQL (cifras). 32 pruebas: dashboard de los 7 usuarios, lista de documentos por rol, visores y descarga, ausencia de claves en `dist/` y en la red (valores de `deploy/.env` + patrones), renovación y logout, y chat no disponible.
+
+## Subida de documentos (F3b, solo MANAGER)
+El botón «Subir documento» (pantalla Documentos) solo se pinta si el rol del perfil es `MANAGER`; es solo comodidad visual: la autoridad es el backend (un no-MANAGER recibe 403 en `POST /documents`, `GET /users` y `GET /documents/upload-config`). El diálogo (`<dialog>` nativo: foco atrapado, Esc, sin estilos ni scripts en línea, compatible con la CSP) pide archivo, código, título, KB, categoría, clasificación, propietario opcional (selector alimentado por `GET /api/v1/users`) y roles permitidos (MANAGER siempre incluido por el servidor). Formatos y tamaño máximo salen de `GET /api/v1/documents/upload-config` (`.pdf .xlsx .csv .json`, 10 MB). El cliente valida archivo, obligatorios, formato del código y tamaño; **no** valida las combinaciones clasificación/roles/propietario ni el tipo real: eso lo decide el servidor y su `ProblemDetail` se muestra siempre (409 código duplicado, 415 tipo, 413 tamaño, 422 combinación). Un envío a la vez (botón y cancelar deshabilitados mientras sube). Tras subir, el listado se recarga con los filtros ajustados a la KB/categoría/tipo del nuevo documento y un aviso enlaza a él.
+
+El E2E `e2e/upload.spec.ts` (8 pruebas) sube documentos con código `TE2E*` y los **borra al terminar** (antes y después de la suite): fila en `documents`, objeto en MinIO (DELETE firmado SigV4 con las credenciales de `deploy/.env`, sin imprimirlas) y filas de `audit_logs` de ese documento. Si el proceso se mata a mitad, la siguiente ejecución limpia los restos.
