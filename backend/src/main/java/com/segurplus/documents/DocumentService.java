@@ -13,6 +13,7 @@ import com.segurplus.documents.api.DocumentDetail;
 import com.segurplus.documents.api.DocumentPage;
 import com.segurplus.documents.api.DocumentSummary;
 import com.segurplus.documents.api.ExcelPreview;
+import com.segurplus.documents.api.UploadConfig;
 import com.segurplus.documents.api.UploadMetadata;
 import com.segurplus.shared.ApiException;
 import java.io.IOException;
@@ -122,14 +123,24 @@ public class DocumentService {
         return content;
     }
 
-    /** Subida: solo MANAGER (403 + ACCESS_DENIED para el resto). Valida tipo real, extensión, tamaño y metadatos. */
-    public DocumentDetail upload(Subject subject, UploadMetadata meta, String originalFilename, byte[] content) {
+    /** Límites de subida para la UI. Solo MANAGER (misma regla que la subida). */
+    public UploadConfig uploadConfig(Subject subject) {
+        requireCreate(subject);
+        return new UploadConfig(props.maxUploadBytes(), FileTypeDetector.ALLOWED_EXTENSIONS);
+    }
+
+    private void requireCreate(Subject subject) {
         Decision decision = policy.decide(subject, Action.CREATE, null);
         if (!decision.allowed()) {
             audit.publish(new AuditEvent(AuditAction.ACCESS_DENIED, subject.userId(), RESOURCE_TYPE, null, false,
                     decision.reasonCode(), AuditEvent.Channel.REST, Map.of("action", Action.CREATE.name())));
             throw ApiException.forbidden();
         }
+    }
+
+    /** Subida: solo MANAGER (403 + ACCESS_DENIED para el resto). Valida tipo real, extensión, tamaño y metadatos. */
+    public DocumentDetail upload(Subject subject, UploadMetadata meta, String originalFilename, byte[] content) {
+        requireCreate(subject);
         if (content == null || content.length == 0) {
             throw ApiException.unprocessable("The file is empty.");
         }

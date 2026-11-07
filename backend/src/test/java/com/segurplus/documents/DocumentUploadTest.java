@@ -117,6 +117,20 @@ class DocumentUploadTest extends IntegrationTest {
     }
 
     @Test
+    void uploadConfigIsManagerOnlyAndReflectsServerLimits() throws Exception {
+        MockHttpServletResponse ok = send("DIR001", get("/api/v1/documents/upload-config"));
+        assertThat(ok.getStatus()).isEqualTo(200);
+        JsonNode cfg = mapper.readTree(ok.getContentAsString());
+        assertThat(cfg.get("maxBytes").asLong()).isEqualTo(10L * 1024 * 1024);
+        assertThat(cfg.get("allowedExtensions")).extracting(JsonNode::asText).containsExactly("pdf", "xlsx", "csv", "json");
+        for (String user : List.of("ACC001", "COM001", "EMP001")) {
+            MockHttpServletResponse r = send(user, get("/api/v1/documents/upload-config"));
+            assertThat(r.getStatus()).as(user).isEqualTo(403);
+            assertThat(r.getContentType()).startsWith("application/problem+json");
+        }
+    }
+
+    @Test
     void contentMustMatchTheDeclaredExtension() throws Exception {
         int before = documentCount();
         byte[] pdf = FixtureFiles.pdf("x");

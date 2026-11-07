@@ -51,6 +51,12 @@ class DocumentController {
         return service.list(subject, kb, category, fileType, page, size);
     }
 
+    @GetMapping("/upload-config")
+    @Operation(summary = "Límites de subida (tamaño máximo y extensiones); solo MANAGER")
+    UploadConfig uploadConfig(Subject subject) {
+        return service.uploadConfig(subject);
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "Detalle (404 si no existe o no está autorizado)")
     DocumentDetail get(Subject subject, @PathVariable UUID id) {

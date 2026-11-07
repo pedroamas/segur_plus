@@ -10,6 +10,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import org.apache.poi.openxml4j.util.ZipSecureFile;
@@ -20,6 +21,8 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
  * cliente, y exige que la extensión coincida. Tipos admitidos: PDF, XLSX, CSV y JSON.
  */
 final class FileTypeDetector {
+
+    static final List<String> ALLOWED_EXTENSIONS = List.of("pdf", "xlsx", "csv", "json");
 
     private static final ObjectMapper JSON = new ObjectMapper();
 
