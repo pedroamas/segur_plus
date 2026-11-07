@@ -17,3 +17,9 @@ export type Money = S['Money']
 export const KBS = ['GENERAL', 'DIRECCION', 'FINANZAS', 'EMPLEADOS'] as const
 export const CATEGORIES = ['REPORT', 'STRATEGY', 'FINANCE', 'CONTRACT', 'PAYROLL', 'COMMERCIAL_ACTIVITY', 'MANUAL', 'POLICY'] as const
 export const FILE_TYPES = ['PDF', 'XLSX', 'CSV', 'JSON'] as const
+
+export type Role = NonNullable<S['UserOption']['role']>
+export const ROLES: readonly Role[] = ['MANAGER', 'ACCOUNTANT', 'SALES_MANAGER', 'EMPLOYEE']
+export const CLASSIFICATIONS = ['PUBLIC', 'INTERNAL', 'CONFIDENTIAL', 'RESTRICTED'] as const
+export type UserOption = Req<S['UserOption']>
+export type UploadConfig = Req<S['UploadConfig']>

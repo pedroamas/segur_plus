@@ -82,6 +82,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Usuarios activos (solo MANAGER; solo id, código, nombre y rol) */
+        get: operations["list_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/users/me": {
         parameters: {
             query?: never;
@@ -170,6 +187,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/documents/upload-config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Límites de subida (tamaño máximo y extensiones); solo MANAGER */
+        get: operations["uploadConfig"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dashboard": {
         parameters: {
             query?: never;
@@ -237,6 +271,14 @@ export interface components {
             username: string;
             password: string;
         };
+        UserOption: {
+            /** Format: uuid */
+            id?: string;
+            employeeCode?: string;
+            fullName?: string;
+            /** @enum {string} */
+            role?: "MANAGER" | "ACCOUNTANT" | "SALES_MANAGER" | "EMPLOYEE";
+        };
         UserProfile: {
             /** Format: uuid */
             id?: string;
@@ -285,6 +327,11 @@ export interface components {
             rows?: string[][];
             rowsTruncated?: boolean;
             columnsTruncated?: boolean;
+        };
+        UploadConfig: {
+            /** Format: int64 */
+            maxBytes?: number;
+            allowedExtensions?: string[];
         };
         CommissionSummary: {
             accrued?: components["schemas"]["Money"];
@@ -466,6 +513,28 @@ export interface operations {
             };
         };
     };
+    list_1: {
+        parameters: {
+            query: {
+                subject: components["schemas"]["Subject"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserOption"][];
+                };
+            };
+        };
+    };
     me: {
         parameters: {
             query: {
@@ -580,6 +649,28 @@ export interface operations {
                 };
                 content: {
                     "*/*": string;
+                };
+            };
+        };
+    };
+    uploadConfig: {
+        parameters: {
+            query: {
+                subject: components["schemas"]["Subject"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UploadConfig"];
                 };
             };
         };

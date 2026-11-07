@@ -1,18 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useAuth } from '../auth/AuthContext'
 import { api } from '../api/client'
 import { formatBytes } from '../api/format'
-import { CATEGORIES, FILE_TYPES, KBS, type DocumentPage } from '../api/types'
+import { CATEGORY_LABEL, CLASSIFICATION_LABEL, KB_LABEL } from '../api/labels'
+import { CATEGORIES, FILE_TYPES, KBS, type DocumentDetail, type DocumentPage } from '../api/types'
+import UploadDialog from '../components/UploadDialog'
 import { ErrorBox, Loading, errorMessage } from '../components/Async'
 
 const PAGE_SIZE = 20
-
-const KB_LABEL: Record<string, string> = { GENERAL: 'General', DIRECCION: 'Dirección', FINANZAS: 'Finanzas', EMPLEADOS: 'Empleados' }
-const CATEGORY_LABEL: Record<string, string> = {
-  REPORT: 'Informe', STRATEGY: 'Estrategia', FINANCE: 'Finanzas', CONTRACT: 'Contrato', PAYROLL: 'Nómina',
-  COMMERCIAL_ACTIVITY: 'Actividad comercial', MANUAL: 'Manual', POLICY: 'Política',
-}
-const CLASSIFICATION_LABEL: Record<string, string> = { PUBLIC: 'Pública', INTERNAL: 'Interna', CONFIDENTIAL: 'Confidencial', RESTRICTED: 'Restringida' }
 
 export default function DocumentsPage() {
   const [kb, setKb] = useState('')
@@ -21,6 +17,13 @@ export default function DocumentsPage() {
   const [page, setPage] = useState(0)
   const [data, setData] = useState<DocumentPage | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const { user } = useAuth()
+  // Solo visibilidad del botón: la autoridad es el backend (un no-MANAGER recibiría 403 igualmente).
+  const canUpload = user?.role === 'MANAGER'
+  const [uploadOpen, setUploadOpen] = useState(false)
+  const [uploaded, setUploaded] = useState<DocumentDetail | null>(null)
+  const [reload, setReload] = useState(0)
+  const uploadButton = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -36,7 +39,7 @@ export default function DocumentsPage() {
     return () => {
       cancelled = true
     }
-  }, [kb, category, fileType, page])
+  }, [kb, category, fileType, page, reload])
 
   function filter(set: (v: string) => void) {
     return (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -45,9 +48,36 @@ export default function DocumentsPage() {
     }
   }
 
+  function closeUpload() {
+    setUploadOpen(false)
+    uploadButton.current?.focus()
+  }
+
+  /** Tras subir: se cierra el diálogo, se filtra por la KB/categoría/tipo del nuevo documento y se recarga el listado. */
+  function onUploaded(doc: DocumentDetail) {
+    setUploaded(doc)
+    setKb(doc.kb)
+    setCategory(doc.category)
+    setFileType(doc.fileType)
+    setPage(0)
+    setReload((n) => n + 1)
+    closeUpload()
+  }
+
   return (
     <section aria-labelledby="docs-title">
-      <h1 id="docs-title">Documentos</h1>
+      <div className="page-head">
+        <h1 id="docs-title">Documentos</h1>
+        {canUpload && (
+          <button type="button" ref={uploadButton} onClick={() => setUploadOpen(true)} data-testid="upload-open">Subir documento</button>
+        )}
+      </div>
+      {uploaded && (
+        <p role="status" className="success-box" data-testid="upload-success">
+          Documento <strong>{uploaded.code}</strong> subido correctamente. <Link to={`/documentos/${uploaded.id}`}>Abrirlo</Link>. Los filtros se han ajustado para mostrarlo.
+        </p>
+      )}
+      {canUpload && uploadOpen && <UploadDialog onClose={closeUpload} onUploaded={onUploaded} />}
       <form className="toolbar" aria-label="Filtros" onSubmit={(e) => e.preventDefault()}>
         <label htmlFor="f-kb">Base de conocimiento</label>
         <select id="f-kb" value={kb} onChange={filter(setKb)}>

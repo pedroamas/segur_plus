@@ -1,13 +1,7 @@
 import type { ReactNode } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
+import { ROLE_LABEL } from '../api/labels'
 import { useAuth } from '../auth/AuthContext'
-
-const ROLE_LABEL: Record<string, string> = {
-  MANAGER: 'Dirección',
-  ACCOUNTANT: 'Contabilidad',
-  SALES_MANAGER: 'Responsable comercial',
-  EMPLOYEE: 'Empleado',
-}
 
 export default function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth()

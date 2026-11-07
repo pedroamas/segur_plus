@@ -124,6 +124,10 @@ export function createApiClient(options: ClientOptions = {}) {
     async getJson<T>(path: string): Promise<T> {
       return (await request(path, { headers: { Accept: 'application/json' } })).json() as Promise<T>
     },
+    /** Envía un multipart/form-data. No se fija Content-Type: el navegador añade el boundary. */
+    async postForm<T>(path: string, form: FormData): Promise<T> {
+      return (await request(path, { method: 'POST', headers: { Accept: 'application/json' }, body: form })).json() as Promise<T>
+    },
     async getBlob(path: string): Promise<{ blob: Blob; filename?: string }> {
       const res = await request(path)
       const m = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(res.headers.get('Content-Disposition') ?? '')
