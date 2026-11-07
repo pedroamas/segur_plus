@@ -1,3 +1,4 @@
+import { createHash, createHmac } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
@@ -55,4 +56,50 @@ export function sql(query: string): string {
     ['exec', '-e', 'Q', 'segurplus-postgres-1', 'sh', '-c', 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -At -F "|" -c "$Q"'],
     { env: { ...process.env, Q: query }, encoding: 'utf8' },
   ).trim()
+}
+
+// ---- Limpieza de documentos subidos por los E2E (código TE2E*): fila en BD, objeto en MinIO y filas de auditoría ----
+
+const BUCKET = 'segurplus-documents'
+const MINIO_URL = process.env.E2E_MINIO_URL ?? 'http://localhost:9000'
+
+const hmac = (key: Buffer | string, data: string) => createHmac('sha256', key).update(data).digest()
+const sha = (data: string) => createHash('sha256').update(data).digest('hex')
+
+/** Petición S3 firmada (SigV4, path-style) con las credenciales de deploy/.env; no se imprimen ni se guardan. */
+async function minioRequest(method: 'DELETE' | 'HEAD', key: string): Promise<number> {
+  const env = readEnv()
+  const url = new URL(`${MINIO_URL}/${BUCKET}/${key}`)
+  const now = new Date().toISOString().replace(/[:-]|\.\d{3}/g, '')
+  const day = now.slice(0, 8)
+  const empty = sha('')
+  const headers = `host:${url.host}\nx-amz-content-sha256:${empty}\nx-amz-date:${now}\n`
+  const signed = 'host;x-amz-content-sha256;x-amz-date'
+  const canonical = [method, url.pathname, '', headers, signed, empty].join('\n')
+  const scope = `${day}/us-east-1/s3/aws4_request`
+  const toSign = ['AWS4-HMAC-SHA256', now, scope, sha(canonical)].join('\n')
+  const k = hmac(hmac(hmac(hmac(`AWS4${env.MINIO_ROOT_PASSWORD}`, day), 'us-east-1'), 's3'), 'aws4_request')
+  const signature = createHmac('sha256', k).update(toSign).digest('hex')
+  const res = await fetch(url, {
+    method,
+    headers: {
+      'x-amz-date': now,
+      'x-amz-content-sha256': empty,
+      Authorization: `AWS4-HMAC-SHA256 Credential=${env.MINIO_ROOT_USER}/${scope}, SignedHeaders=${signed}, Signature=${signature}`,
+    },
+  })
+  return res.status
+}
+
+export const minioObjectExists = async (key: string) => (await minioRequest('HEAD', key)) === 200
+
+/** Borra de BD, MinIO y auditoría todo documento cuyo código empiece por TE2E. Idempotente. */
+export async function cleanupE2eDocuments(): Promise<void> {
+  const rows = sql("SELECT id || '|' || storage_key FROM documents WHERE code LIKE 'TE2E%'").split('\n').filter(Boolean)
+  for (const row of rows) {
+    const [id, key] = row.split('|')
+    await minioRequest('DELETE', key)
+    sql(`DELETE FROM audit_logs WHERE resource_id = '${id}'`)
+    sql(`DELETE FROM documents WHERE id = '${id}'`)
+  }
 }
