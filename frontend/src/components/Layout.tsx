@@ -13,7 +13,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         <nav aria-label="Principal">
           <NavLink to="/" end>Panel</NavLink>
           <NavLink to="/documentos">Documentos</NavLink>
-          <NavLink to="/chat">Chat <span className="badge">No disponible</span></NavLink>
+          <NavLink to="/chat">Chat</NavLink>
         </nav>
         <div className="user">
           <span data-testid="user-name">{user?.fullName}</span>

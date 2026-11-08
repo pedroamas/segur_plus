@@ -128,6 +128,22 @@ export function createApiClient(options: ClientOptions = {}) {
     async postForm<T>(path: string, form: FormData): Promise<T> {
       return (await request(path, { method: 'POST', headers: { Accept: 'application/json' }, body: form })).json() as Promise<T>
     },
+    /**
+     * POST JSON que devuelve un cuerpo en streaming (SSE). Pasa por el mismo `request`: un 401 renueva el access token (una sola
+     * vez, con la cola de F3) y reintenta ANTES de abrir el stream; un error HTTP se lanza como ApiError. La respuesta se
+     * devuelve sin consumir.
+     */
+    async postStream(path: string, body: unknown, signal?: AbortSignal): Promise<Response> {
+      return request(path, {
+        method: 'POST',
+        headers: { Accept: 'text/event-stream', 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal,
+      })
+    },
+    async delete(path: string): Promise<void> {
+      await request(path, { method: 'DELETE' })
+    },
     async getBlob(path: string): Promise<{ blob: Blob; filename?: string }> {
       const res = await request(path)
       const m = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(res.headers.get('Content-Disposition') ?? '')

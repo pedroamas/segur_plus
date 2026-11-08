@@ -23,3 +23,10 @@ export const ROLES: readonly Role[] = ['MANAGER', 'ACCOUNTANT', 'SALES_MANAGER',
 export const CLASSIFICATIONS = ['PUBLIC', 'INTERNAL', 'CONFIDENTIAL', 'RESTRICTED'] as const
 export type UserOption = Req<S['UserOption']>
 export type UploadConfig = Req<S['UploadConfig']>
+
+// ---- Chat (F5) ----
+export type ConversationSummary = Req<S['ConversationSummary']>
+export type MessageView = Omit<Req<S['MessageView']>, 'sources' | 'tools'> & {
+  sources: Req<S['Source']>[]
+  tools: Req<S['ToolUse']>[]
+}

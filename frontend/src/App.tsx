@@ -28,7 +28,7 @@ export default function App() {
         <Route index element={<DashboardPage />} />
         <Route path="documentos" element={<DocumentsPage />} />
         <Route path="documentos/:id" element={<DocumentDetailPage />} />
-        <Route path="chat" element={<ChatPage />} />
+        <Route path="chat/:conversationId?" element={<ChatPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

@@ -22,6 +22,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/chat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pregunta al asistente (respuesta SSE)
+         * @description Eventos: conversation, status, tool, delta, sources, verification, done, error. Conversación ajena ⇒ 404; sin motor de IA ⇒ 503.
+         */
+        post: operations["chat"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/refresh": {
         parameters: {
             query?: never;
@@ -224,6 +244,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/chat/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mis conversaciones
+         * @description Solo las del usuario del token.
+         */
+        get: operations["list_2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat/conversations/{id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mensajes de una conversación propia
+         * @description Ajena o inexistente ⇒ 404 (también para MANAGER). Las fuentes se re-autorizan al leer.
+         */
+        get: operations["messages"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat/conversations/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Borrar una conversación propia
+         * @description Ajena o inexistente ⇒ 404.
+         */
+        delete: operations["delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -261,6 +341,17 @@ export interface components {
             /** Format: date-time */
             updatedAt?: string;
         };
+        /** @description Solo conversationId y message; los demás campos se ignoran. */
+        ChatRequest: {
+            /**
+             * Format: uuid
+             * @description Conversación propia a continuar; si falta se crea una nueva. Ajena o inexistente ⇒ 404.
+             */
+            conversationId?: string;
+            /** @description Pregunta del usuario (máx. 2000 caracteres). */
+            message?: string;
+        };
+        StreamingResponseBody: unknown;
         TokenResponse: {
             accessToken?: string;
             tokenType?: string;
@@ -379,6 +470,44 @@ export interface components {
             premiums?: components["schemas"]["Money"];
             percent?: number;
         };
+        ConversationSummary: {
+            /** Format: uuid */
+            id?: string;
+            title?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        MessageView: {
+            /** Format: uuid */
+            id?: string;
+            role?: string;
+            content?: string;
+            status?: string;
+            sources?: components["schemas"]["Source"][];
+            tools?: components["schemas"]["ToolUse"][];
+            verification?: unknown;
+            /** Format: int32 */
+            tokensIn?: number;
+            /** Format: int32 */
+            tokensOut?: number;
+            /** Format: int32 */
+            latencyMs?: number;
+            /** Format: date-time */
+            createdAt?: string;
+        };
+        Source: {
+            /** Format: uuid */
+            documentId?: string;
+            code?: string;
+            title?: string;
+            cited?: boolean;
+        };
+        ToolUse: {
+            tool?: string;
+            params?: unknown;
+        };
     };
     responses: never;
     parameters: never;
@@ -443,6 +572,32 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["DocumentDetail"];
+                };
+            };
+        };
+    };
+    chat: {
+        parameters: {
+            query: {
+                subject: components["schemas"]["Subject"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": components["schemas"]["StreamingResponseBody"];
                 };
             };
         };
@@ -695,6 +850,74 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["DashboardResponse"];
                 };
+            };
+        };
+    };
+    list_2: {
+        parameters: {
+            query: {
+                subject: components["schemas"]["Subject"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConversationSummary"][];
+                };
+            };
+        };
+    };
+    messages: {
+        parameters: {
+            query: {
+                subject: components["schemas"]["Subject"];
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MessageView"][];
+                };
+            };
+        };
+    };
+    delete: {
+        parameters: {
+            query: {
+                subject: components["schemas"]["Subject"];
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

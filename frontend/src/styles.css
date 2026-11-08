@@ -21,7 +21,7 @@ label { font-weight:600; }
 .login form { display:flex; flex-direction:column; gap:.5rem; } .login h1 { color:var(--accent); text-align:center; }
 .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:1rem 1.25rem; margin:1rem 0; }
 .unavailable { border-left:6px solid #b7791f; }
-form[aria-label^="Mensaje"] { display:flex; flex-direction:column; gap:.5rem; max-width:560px; }
+
 .figures { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:.75rem; margin:0; }
 .figure { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:.75rem 1rem; }
 .figure dt { color:var(--muted); font-size:.9rem; } .figure dd { margin:.15rem 0 0; font-size:1.4rem; font-weight:700; }
@@ -51,3 +51,29 @@ thead th, tfoot th, tfoot td { font-weight:700; background:#eef2f6; } tbody th {
 input[aria-invalid="true"], select[aria-invalid="true"] { border-color:var(--err); border-width:2px; }
 .dialog-actions { display:flex; justify-content:flex-end; gap:.75rem; margin-top:1rem; }
 button.secondary { background:transparent; color:var(--accent); border:1px solid var(--accent); } button.secondary:disabled { color:#7c8794; border-color:#a9b4c0; background:transparent; }
+/* ---- Chat (F5) ---- */
+.chat-layout { display:grid; grid-template-columns:minmax(220px,280px) 1fr; gap:1rem; align-items:start; }
+@media (max-width: 760px) { .chat-layout { grid-template-columns:1fr; } }
+.chat-side { display:flex; flex-direction:column; gap:.5rem; }
+.conv-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:.35rem; max-height:60vh; overflow:auto; }
+.conv { display:flex; gap:.35rem; align-items:stretch; background:var(--card); border:1px solid var(--line); border-radius:8px; padding:.25rem; }
+.conv.active { border-color:var(--accent); border-width:2px; }
+.conv-open { flex:1; min-width:0; background:transparent; color:var(--fg); text-align:left; padding:.3rem .4rem; display:flex; flex-direction:column; }
+.conv-open:disabled { background:transparent; color:var(--muted); }
+.conv-title { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; } .conv-date { font-size:.8rem; }
+.conv-del { padding:.2rem .5rem; font-size:.85rem; }
+.conv-confirm { padding:.25rem; } .conv-confirm p { margin:.1rem 0 .4rem; }
+.chat-main { min-width:0; }
+.chat-log { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:.75rem; min-height:240px; max-height:62vh; overflow:auto; display:flex; flex-direction:column; gap:.6rem; }
+.msg { max-width:88%; border-radius:10px; padding:.55rem .8rem; border:1px solid var(--line); }
+.msg-user { align-self:flex-end; background:#e6f0fa; border-color:#b9d3ee; }
+.msg-assistant { align-self:flex-start; background:#fff; }
+.msg-text { white-space:pre-wrap; overflow-wrap:anywhere; }
+.msg .note, .msg .usage, .msg .verification { margin:.35rem 0 0; font-size:.85rem; }
+.citation { font-weight:700; }
+.sources { margin-top:.4rem; font-size:.9rem; } .sources ul { margin:.15rem 0 0; padding-left:1.1rem; }
+.verification-ok { color:#1f6b3a; } .verification-warn { color:#8a5a00; font-weight:600; }
+.phase { min-height:1.4em; margin:.4rem 0; }
+.chat-form { display:flex; flex-direction:column; gap:.4rem; max-width:none; }
+.chat-form .hint { margin:0; font-size:.85rem; } .chat-actions { display:flex; gap:.6rem; }
+.chat-form textarea[readonly] { background:#f1f4f7; }
