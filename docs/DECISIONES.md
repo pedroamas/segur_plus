@@ -57,6 +57,16 @@ Orden anterior: F3 Dify y chat · F4 Frontend · F5 Seguridad y portfolio. **Ord
 - **Herramientas**: reutilizan `SalesQuery`, `CommissionQuery`, `PolicyQuery` y `TargetQuery`; como esos servicios devuelven totales, **no hay desglose por empleado** (UC-A22 «comisión de cada comercial» se evalúa como «comisiones del equipo»). *Pendiente de decisión del propietario*: ampliar `data` con un desglose por empleado (mismo `DataScope`).
 - **Instancia de Dify**: se alineó `WEAVIATE_AUTHENTICATION_APIKEY_ALLOWED_KEYS` con la `WEAVIATE_API_KEY` ya rotada (la rotación estaba a medias y Weaviate daba 401 al indexar); copia previa en `~/dify/docker/.env.bak-f4`. No se cambiaron puertos ni otras claves ni se actualizó Dify.
 
+## F5 — Chat en el frontend (rama `f5-chat-front`)
+- **Solo `frontend/`**: el contrato del backend de F4 bastó; no se tocó el backend (sí se regeneró `schema.d.ts` con los tipos del chat).
+- **Cuota del modelo (decisión del propietario)**: el chat sigue en la capa gratuita de Gemini. La UI trata 429/503 (HTTP o evento `error`) con «límite de uso del modelo… Reintenta en unos minutos» y 504/`ai-timeout` con «ha tardado demasiado»; el backend hoy clasifica un 429 de Gemini como `ai-unavailable` (503), por eso ambos comparten mensaje. Los E2E gastan **2 turnos reales** (≈4 peticiones a Gemini: planificador + generador); el resto va con `POST /chat` interceptado.
+- **Herramientas de datos**: siguen devolviendo solo totales (sin desglose por empleado), sin cambios (decisión del propietario).
+- **Render del modelo**: texto + markdown mínimo (párrafos, listas, negrita, código) construido como elementos de React; HTML, imágenes y enlaces markdown se ven literales. Se descartó una librería de markdown: el modelo usa justo ese subconjunto y así no hay HTML que sanear. Las citas `[D04]` solo son enlaces si están en `sources` (autorizadas por el servidor); el visor responde 404 si no se puede leer y la UI muestra el mensaje.
+- **Timeout**: 90 s sin recibir ningún dato (el backend no manda keep-alive; sus fases `status` reinician el plazo). Cancelar aborta con `AbortController` y el backend marca `CANCELLED`.
+- **Borrado**: confirmación en línea (no `window.confirm`), accesible y probable en E2E. El borrado del backend es lógico (`deleted_at`); la limpieza de los E2E borra las filas de verdad por diferencia con una foto previa (las 55 conversaciones de la evaluación F4 no se tocan).
+- **Tras un error** la pregunta vuelve al cuadro; si el servidor llegó a guardar la pregunta (error dentro del stream) reenviarla la duplica en el historial. Se aceptó por simplicidad.
+- **Incidencia de entorno**: durante la validación el backend (arrancado en F4) quedó colgado (`ClassNotFoundException` de logback, jar reconstruido bajo la JVM en marcha); se reinició con el mismo jar. No hubo cambios de código del backend.
+
 ## Consecuencias del recorte a tener presentes
 - **READ y DOWNLOAD van unidos** (decidido). SALES_MANAGER puede leer y descargar D11 y la actividad comercial (D15, D18, D21, D24).
 - **Sin herramienta de gastos ni facturas** (decidido: no se añade `get_expenses`). Esas preguntas se responden desde los documentos D07, D12 y D13 (RAG), no desde la BD.

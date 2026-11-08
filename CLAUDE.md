@@ -58,7 +58,7 @@ python3 evaluation/run_eval.py          # evaluación real contra :8100 (recall@
 
 # frontend (F3; desde frontend/; detalle en frontend/README.md)
 npm run dev | build | test     # Vite :5174 (proxy /api → :8100), build a dist/, Vitest
-npm run test:e2e               # Playwright (Chrome) contra el stack vivo https://192.168.0.28:5174
+npm run test:e2e               # Playwright (Chrome) contra el stack vivo https://192.168.0.28:5174 (el chat real gasta 2 turnos de Gemini por pasada; para iterar: -g interceptado)
 docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d web   # Caddy: dist por HTTPS solo en la LAN (no abrir el 5174 en el router)
 ```
 Detalle: `backend/README.md` y `generator/README.md`.

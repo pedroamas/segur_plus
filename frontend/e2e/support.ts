@@ -103,3 +103,29 @@ export async function cleanupE2eDocuments(): Promise<void> {
     sql(`DELETE FROM documents WHERE id = '${id}'`)
   }
 }
+
+// ---- Conversaciones de chat creadas por los E2E: se limpian por diferencia con una foto previa (las de la evaluación F4 no se tocan) ----
+
+export const conversationIds = (): Set<string> => new Set(sql('SELECT id FROM conversations').split('\n').filter(Boolean))
+
+/** Borra de BD (mensajes, auditoría y conversación) las conversaciones que no estaban en `before`. Idempotente. */
+export function cleanupE2eConversations(before: Set<string>): number {
+  const created = [...conversationIds()].filter((id) => !before.has(id))
+  for (const id of created) {
+    sql(`DELETE FROM messages WHERE conversation_id = '${id}'`)
+    sql(`DELETE FROM audit_logs WHERE resource_id = '${id}'`)
+    sql(`DELETE FROM conversations WHERE id = '${id}'`)
+  }
+  return created.length
+}
+
+/** Conversaciones vivas (sin borrado lógico) de un usuario, con título. */
+export function liveConversations(user: string): { id: string; title: string }[] {
+  return sql(`SELECT c.id || '|' || coalesce(c.title,'') FROM conversations c JOIN users u ON u.id = c.user_id WHERE u.employee_code = '${user}' AND c.deleted_at IS NULL`)
+    .split('\n')
+    .filter(Boolean)
+    .map((r) => {
+      const i = r.indexOf('|')
+      return { id: r.slice(0, i), title: r.slice(i + 1) }
+    })
+}

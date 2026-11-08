@@ -7,7 +7,7 @@ const DIST = path.resolve(import.meta.dirname, '..', 'dist')
 
 // Claves y credenciales de deploy/.env que NUNCA pueden llegar al navegador. Se buscan sus VALORES (aunque estén vacíos: un valor
 // vacío no se puede buscar, pero queda constancia en el informe y, en cuanto alguien lo rellene, el test lo vigila).
-const SENSITIVE = ['DIFY_APP_API_KEY', 'DIFY_KNOWLEDGE_API_KEY', 'GEMINI_API_KEY', 'JWT_SECRET', 'MINIO_ROOT_USER', 'MINIO_ROOT_PASSWORD', 'POSTGRES_PASSWORD', 'SEGURPLUS_SEED_DEFAULT_PASSWORD'] as const
+const SENSITIVE = ['DIFY_APP_API_KEY', 'DIFY_APP_API_KEY_FALLBACK', 'DIFY_PLANNER_API_KEY', 'DIFY_PLANNER_API_KEY_FALLBACK', 'DIFY_KNOWLEDGE_API_KEY', 'GEMINI_API_KEY', 'JWT_SECRET', 'MINIO_ROOT_USER', 'MINIO_ROOT_PASSWORD', 'POSTGRES_PASSWORD', 'SEGURPLUS_SEED_DEFAULT_PASSWORD'] as const
 
 // Patrones evidentes de claves (Dify `app-…`, estilo OpenAI `sk-…`, Google `AIza…`, claves privadas, JWT embebidos).
 const PATTERNS: [string, RegExp][] = [
@@ -93,7 +93,8 @@ test.describe('F3 criterio 4: ninguna clave en el bundle ni en la red', () => {
         await page.goBack()
       }
       await page.getByRole('link', { name: /Chat/ }).click()
-      await expect(page.getByTestId('chat-unavailable')).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Chat', level: 1 })).toBeVisible()
+      await expect(page.getByTestId('conversations')).toBeVisible()
       await page.getByRole('button', { name: 'Cerrar sesión' }).click()
       await expect(page.getByRole('button', { name: 'Entrar' })).toBeVisible()
     }
