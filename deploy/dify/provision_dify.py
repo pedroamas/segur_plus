@@ -155,13 +155,17 @@ def main():
         raise SystemExit("El plugin langgenius/gemini no está instalado en Dify: instálalo desde Plugins > Marketplace y reejecuta.")
     _, providers = d.console("GET", "/workspaces/current/model-providers")
     prov = next((p for p in (providers or {}).get("data", []) if p.get("provider") == PROVIDER), None)
-    configured = bool(prov) and (prov.get("custom_configuration") or {}).get("status") == "active"
-    if not configured:
+    cc = (prov or {}).get("custom_configuration") or {}
+    if cc.get("status") != "active" or not cc.get("current_credential_id"):
         d.console("POST", f"/workspaces/current/model-providers/{PROVIDER}/credentials",
                   {"credentials": {"google_api_key": gemini_key}, "name": "SegurPlus"})
         log("proveedor Gemini configurado")
     else:
-        log("proveedor Gemini ya configurado")
+        # La credencial activa puede traer una clave antigua o inválida (pasó en esta instancia): se fija siempre la de deploy/.env.
+        d.console("PUT", f"/workspaces/current/model-providers/{PROVIDER}/credentials",
+                  {"credential_id": cc["current_credential_id"], "credentials": {"google_api_key": gemini_key},
+                   "name": cc.get("current_credential_name") or "SegurPlus"})
+        log("credencial de Gemini actualizada con la clave de deploy/.env")
 
     # 1b) habilitar los modelos que usamos (el plugin los trae «disabled» por defecto)
     _, models = d.console("GET", f"/workspaces/current/model-providers/{PROVIDER}/models")

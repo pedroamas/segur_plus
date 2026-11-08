@@ -38,7 +38,19 @@ curl -s 'localhost:8100/api/v1/documents?size=5' -H "Authorization: Bearer $TOKE
 | `GET /users/me` | autenticado | identidad solo del token |
 | `GET /documents` · `/{id}` · `/{id}/view` · `/{id}/preview` · `/{id}/download` | READ/DOWNLOAD por política | no autorizado ⇒ 404; `view` solo PDF, `preview` solo XLSX |
 | `GET /dashboard?month=YYYY-MM` | cifras del mes según el **rol del token** (alcance OWN/TEAM/GLOBAL en `DataScopeResolver`); mes por defecto = último mes cerrado del `Clock`; mes sin datos ⇒ 400 | primas, comisiones (devengadas, devoluciones, neto), pólizas por estado, cumplimiento de objetivos; ACCOUNTANT: gastos y sin cumplimiento |
-| `POST /documents` (multipart) | solo MANAGER (403 al resto) | tipo real, extensión, ≤10 MB |
+| `POST /documents` (multipart) | solo MANAGER (403 al resto) | tipo real, extensión, ≤10 MB; dispara el indexador (`DocumentChanged`) |
+| `POST /chat` `{conversationId?, message}` | autenticado | **SSE**: eventos `conversation`, `status`, `tool`, `delta`, `sources`, `verification`, `done`, `error`. Identidad y KBs salen del JWT; `employee_id`, `role`, `assistantId`, `datasetId` se ignoran (auditado `IGNORED_CLIENT_FIELD`). Sin Dify ⇒ 503 |
+| `GET /chat/conversations` · `/conversations/{id}/messages` · `DELETE /conversations/{id}` | solo el propietario | ajena o inexistente ⇒ 404 (también MANAGER); las fuentes se re-autorizan al leer |
 
 ## Configuración relevante
 `segurplus.auth.access-token-ttl` (10-15 min; falla al arrancar fuera de rango), `segurplus.documents.preview.*` (límites del preview), `segurplus.clock.*` (fecha de negocio 2027-01-15), `segurplus.seed.*` (solo desarrollo).
+
+## IA (F4): Dify + Gemini
+Paquete `ai`: `AiGateway` (puerto) + `DifyAiGateway`; `DocumentIndexer` (PENDING → INDEXING → INDEXED | FAILED, job cada 30 s, reintento de FAILED a los 5 min); `Planner` (plan JSON validado contra el catálogo del rol); `ToolExecutor` (4 herramientas sobre los servicios de `data`); `RetrievalService` (filtro de metadatos + **re-autorización por documento** antes del LLM); `ChatService`/`ChatVerifier`; perfil por rol en `src/main/resources/assistant-profile.yml`.
+```
+python3 deploy/dify/provision_dify.py      # idempotente: proveedor Gemini, 4 datasets, 4 apps y claves en deploy/.env
+# credenciales del admin de Dify en ~/.config/segurplus/dify_admin.env (600); clave de Gemini en deploy/.env
+set -a; . ../deploy/.env; set +a && ./mvnw spring-boot:run     # el indexador carga los documentos PENDING
+python3 evaluation/run_eval.py             # 32 preguntas: recall@5, citas válidas, fugas (contra :8100)
+```
+Variables: `DIFY_BASE_URL` (sin `/v1`), `DIFY_KNOWLEDGE_API_KEY`, `DIFY_APP_API_KEY[_FALLBACK]`, `DIFY_PLANNER_API_KEY[_FALLBACK]`, `AI_INDEXER_ENABLED`. Sin ellas el chat responde 503 y el indexador no corre. Tests: `ChatAccessMatrixTest` (corpus completo simulado, 7 usuarios), `ChatToolsTest`, `DocumentIndexerTest`, `DifyGatewayTimeoutTest` (WireMock). Decisiones: ADR 0003 y 0008.

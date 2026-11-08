@@ -52,6 +52,10 @@ uv venv .venv && . .venv/bin/activate && uv pip install -r requirements.txt     
 python -m segurplus_gen.seed   # resetea e inserta el dataset, genera los 32 documentos, los sube a MinIO y rellena documents (idempotente)
 python -m pytest               # anclas de octubre, cifra documento = BD, determinismo, matriz de 224 celdas contra :8100
 
+# IA (F4): Dify + Gemini (ADR 0003, 0008); credenciales del admin de Dify en ~/.config/segurplus/dify_admin.env (600)
+python3 deploy/dify/provision_dify.py   # idempotente: proveedor, modelos, 4 datasets, 4 apps; escribe las claves en deploy/.env
+python3 evaluation/run_eval.py          # evaluación real contra :8100 (recall@5, citas válidas, fugas; meta: 0 fugas)
+
 # frontend (F3; desde frontend/; detalle en frontend/README.md)
 npm run dev | build | test     # Vite :5174 (proxy /api → :8100), build a dist/, Vitest
 npm run test:e2e               # Playwright (Chrome) contra el stack vivo https://192.168.0.28:5174
