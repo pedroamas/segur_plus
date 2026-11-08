@@ -20,3 +20,16 @@
 5. Si el filtro `owner_id` de Dify no funciona, se documenta el plan B (ADR 0003) y la prueba de aislamiento entre empleados sigue en verde.
 
 **Fuera de alcance:** la UI del chat (se conecta en [F5](F5-conectar-chat.md); en F3 la pantalla existe como «no disponible») y el dashboard (ya entregado en F3, con su parte de backend).
+
+## Estado (rama `f4-chat`)
+Implementada y medida. Detalle de decisiones: [DECISIONES](../DECISIONES.md#f4--dify-y-chat-rama-f4-chat), [ADR 0003](../adr/0003-dify-aigateway-recuperacion-controlada.md) (verificación en Dify 1.18) y [ADR 0008](../adr/0008-embedding-y-modelos-gemini.md).
+
+| Criterio | Resultado |
+|---|---|
+| 1. recall@5 ≥ 0,8 y 100 % de citas válidas | **1,00 (18/18)** y **100 % (23/23 citas)**, Dify + Gemini reales, 32 preguntas (`evaluation/results/run1.json`) |
+| 2. Cero fragmentos o cifras prohibidos | **0 fugas** con Dify real (9 preguntas negativas y las demás, 7 usuarios) y con WireMock (corpus completo, los 7 usuarios × 32 documentos: `ChatAccessMatrixTest`) |
+| 3. Cifras de octubre = BD = dashboard | `ChatToolsTest` (12 / 9.680 € / 968 € / 80,7 %, idénticas al dashboard) y pregunta Q01 real (80,7 %) |
+| 4. Quitar rol / cambiar propietario sin reindexar | `ChatAccessMatrixTest.revokingARoleOrChangingTheOwner…`; con Dify real, el filtro de metadatos actualizado también lo respeta (sonda del ADR 0003) |
+| 5. Plan B de `owner_id` | No necesario: el filtro `owner_id is` y el `or` funcionan en Dify 1.18 |
+
+Limitaciones medidas (no ocultas): refusal 8/9 (Q09: ACC001 pregunta «¿cuánto cobra Pedro Gómez?» y el modelo responde con primas y comisión del documento D13, que sí puede leer; no hay salario ni fuga) y hechos 8/10 (Q07 no suma 7.250 €; Q15 el modelo ligero dijo «no tengo información» pese a recibir 968 € de la herramienta). Son fallos de calidad del modelo ligero, no de autorización.

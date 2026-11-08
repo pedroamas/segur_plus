@@ -48,6 +48,15 @@ Orden anterior: F3 Dify y chat · F4 Frontend · F5 Seguridad y portfolio. **Ord
 - El cliente **no** replica las reglas de combinación (RESTRICTED + EMPLOYEE, KB Empleados sin propietario): se muestran los 422 del servidor, para no tener dos fuentes de verdad.
 - Pendiente (fuera de alcance): no hay endpoint de borrado ni edición de documentos; los E2E limpian por SQL/S3 directo. Un documento subido queda `index_status = PENDING` hasta F4.
 
+## F4 — Dify y chat (rama `f4-chat`)
+- **Modelos** ([ADR 0008](adr/0008-embedding-y-modelos-gemini.md)): embedding `gemini-embedding-001` (fijado); chat `gemini-3-flash-preview` principal y `gemini-3.5-flash` de reserva por defecto, configurables con `GEMINI_MODEL` y `GEMINI_MODEL_FALLBACK`. **La cuota gratuita de la clave de Gemini es de 20 peticiones/día y 5/min por modelo** (error 429 `generate_content_free_tier_requests`), insuficiente para una evaluación; la corrida de F4 se hizo con `gemini-3.1-flash-lite` (principal) y `gemini-3.5-flash-lite` (reserva), que no se agotaron. Con una clave de pago bastaría cambiar las dos variables y reejecutar `deploy/dify/provision_dify.py`.
+- **Cuatro apps de Dify** (planificador y generador, cada una con su modelo de reserva) porque una app está atada a un modelo; el reintento antes del primer token va a la app de reserva.
+- **Ingesta por texto**: Dify no admite JSON en `create-by-file`; el backend extrae el texto (PDFBox, POI, CSV, JSON) y usa `create-by-text`.
+- **Sin `conversation_id` de Dify**: el historial lo reenvía el backend desde `messages` (sin fragmentos), para que un cambio de permisos no deje contexto antiguo en Dify.
+- **Una columna nueva** `messages.verification` (migración V6): el resultado de la verificación de cifras y citas se guarda en el mensaje, como decía 04-chat-flow. No hay tablas nuevas.
+- **Herramientas**: reutilizan `SalesQuery`, `CommissionQuery`, `PolicyQuery` y `TargetQuery`; como esos servicios devuelven totales, **no hay desglose por empleado** (UC-A22 «comisión de cada comercial» se evalúa como «comisiones del equipo»). *Pendiente de decisión del propietario*: ampliar `data` con un desglose por empleado (mismo `DataScope`).
+- **Instancia de Dify**: se alineó `WEAVIATE_AUTHENTICATION_APIKEY_ALLOWED_KEYS` con la `WEAVIATE_API_KEY` ya rotada (la rotación estaba a medias y Weaviate daba 401 al indexar); copia previa en `~/dify/docker/.env.bak-f4`. No se cambiaron puertos ni otras claves ni se actualizó Dify.
+
 ## Consecuencias del recorte a tener presentes
 - **READ y DOWNLOAD van unidos** (decidido). SALES_MANAGER puede leer y descargar D11 y la actividad comercial (D15, D18, D21, D24).
 - **Sin herramienta de gastos ni facturas** (decidido: no se añade `get_expenses`). Esas preguntas se responden desde los documentos D07, D12 y D13 (RAG), no desde la BD.
