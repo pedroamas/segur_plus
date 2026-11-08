@@ -2,12 +2,18 @@ package com.segurplus.support;
 
 import org.junit.jupiter.api.AfterEach;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
-/** {@link IntegrationTest} con Dify simulado ({@link FakeDify}) y el indexador activo (sin job periódico: se invoca a mano). */
+/** {@link IntegrationTest} con Dify simulado ({@link FakeDify}), servidor HTTP real en puerto aleatorio y el indexador activo (sin job periódico: se invoca a mano). */
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public abstract class AiIntegrationTest extends IntegrationTest {
+
+    @LocalServerPort
+    protected int port;
 
     @DynamicPropertySource
     static void ai(DynamicPropertyRegistry r) {
@@ -19,6 +25,7 @@ public abstract class AiIntegrationTest extends IntegrationTest {
         r.add("segurplus.ai.indexer.interval-seconds", () -> "3600");
         r.add("segurplus.ai.indexer.poll-timeout-seconds", () -> "5");
         r.add("segurplus.ai.dify.first-response-timeout", () -> "5s");
+        r.add("segurplus.ai.retrieval.max-context-chunks", () -> "50");   // sin recorte: el test comprueba la autorización, no el ranking
     }
 
     @Autowired

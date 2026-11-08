@@ -36,6 +36,8 @@ class ChatController {
     /** Tope del emisor: ligeramente por encima del tope de 120 s de generación (ADR 0003). */
     private static final long EMITTER_TIMEOUT_MS = 150_000;
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ChatController.class);
+
     private final ChatService chat;
     private final ConversationService conversations;
     private final ObjectMapper mapper;
@@ -63,9 +65,12 @@ class ChatController {
                     try {
                         emitter.send(SseEmitter.event().name(event).data(mapper.writeValueAsString(data), MediaType.APPLICATION_JSON));
                     } catch (IOException | IllegalStateException e) {
+                        log.info("SSE client gone ({} cause {})", e.getClass().getSimpleName(), e.getCause() == null ? null : e.getCause().getClass().getName() + ": " + e.getCause().getMessage());
                         throw new ClientDisconnected(e);
                     }
                 });
+            } catch (Throwable t) {
+                log.error("Chat turn aborted unexpectedly ({})", t.getClass().getName());
             } finally {
                 emitter.complete();
                 MDC.remove("correlationId");
