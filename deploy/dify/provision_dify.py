@@ -13,8 +13,8 @@ Credenciales (NUNCA por chat ni en el repositorio):
   ~/.config/segurplus/dify_admin.env  (chmod 600)  con  DIFY_ADMIN_EMAIL=...  y  DIFY_ADMIN_PASSWORD=...
   La clave de Gemini se lee de deploy/.env (GEMINI_API_KEY). El script no imprime ningún secreto.
 
-Variables opcionales (entorno o deploy/.env): DIFY_BASE_URL (def. http://192.168.0.28:8088), GEMINI_MODEL (def. gemini-3.5-flash),
-GEMINI_MODEL_FALLBACK (def. gemini-3-flash-preview), EMBEDDING_MODEL (def. gemini-embedding-001).
+Variables opcionales (entorno o deploy/.env): DIFY_BASE_URL (def. http://192.168.0.28:8088), GEMINI_MODEL (def. gemini-3-flash-preview),
+GEMINI_MODEL_FALLBACK (def. gemini-3.5-flash), EMBEDDING_MODEL (def. gemini-embedding-001).
 
 AVISO: el embedding queda fijado en los datasets al crearlos. Cambiarlo obliga a reindexar (ver docs/adr/0008-embedding.md).
 """
@@ -137,9 +137,11 @@ def main():
     gemini_key = env.get("GEMINI_API_KEY")
     if not gemini_key:
         raise SystemExit("Falta GEMINI_API_KEY en deploy/.env.")
-    base = env.get("DIFY_BASE_URL") or "http://192.168.0.28:8088"
-    model_primary = env.get("GEMINI_MODEL") or "gemini-3.5-flash"
-    model_fallback = env.get("GEMINI_MODEL_FALLBACK") or "gemini-3-flash-preview"
+    base = (env.get("DIFY_BASE_URL") or "http://192.168.0.28:8088").rstrip("/")
+    if base.endswith("/v1"):  # el backend añade /v1/...; la base es solo esquema+host+puerto
+        base = base[:-3]
+    model_primary = env.get("GEMINI_MODEL") or "gemini-3-flash-preview"
+    model_fallback = env.get("GEMINI_MODEL_FALLBACK") or "gemini-3.5-flash"
     embedding = env.get("EMBEDDING_MODEL") or "gemini-embedding-001"
 
     d = Dify(base)
@@ -160,6 +162,16 @@ def main():
         log("proveedor Gemini configurado")
     else:
         log("proveedor Gemini ya configurado")
+
+    # 1b) habilitar los modelos que usamos (el plugin los trae «disabled» por defecto)
+    _, models = d.console("GET", f"/workspaces/current/model-providers/{PROVIDER}/models")
+    state = {m["model"]: m.get("status") for m in (models or {}).get("data", [])}
+    for name, mtype in ((model_primary, "llm"), (model_fallback, "llm"), (embedding, "text-embedding")):
+        if name not in state:
+            raise SystemExit(f"El modelo {name} no existe en el plugin Gemini de Dify.")
+        if state[name] != "active":
+            d.console("PATCH", f"/workspaces/current/model-providers/{PROVIDER}/models/enable", {"model": name, "model_type": mtype})
+            log(f"modelo {name} habilitado")
 
     # 2) modelos por defecto --------------------------------------------------------------------------------------------
     d.console("POST", "/workspaces/current/default-model", {"model_settings": [
