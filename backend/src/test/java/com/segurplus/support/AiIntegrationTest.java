@@ -21,6 +21,9 @@ public abstract class AiIntegrationTest extends IntegrationTest {
         r.add("segurplus.ai.dify.knowledge-api-key", () -> FakeDify.KNOWLEDGE_KEY);
         r.add("segurplus.ai.dify.app-api-key", () -> FakeDify.APP_KEY);
         r.add("segurplus.ai.dify.planner-api-key", () -> FakeDify.PLANNER_KEY);
+        // aislar de las variables DIFY_* del entorno de quien ejecuta los tests (no deben colarse claves de reserva reales)
+        r.add("segurplus.ai.dify.app-api-key-fallback", () -> "");
+        r.add("segurplus.ai.dify.planner-api-key-fallback", () -> "");
         r.add("segurplus.ai.indexer.enabled", () -> "true");
         r.add("segurplus.ai.indexer.interval-seconds", () -> "3600");
         r.add("segurplus.ai.indexer.poll-timeout-seconds", () -> "5");
