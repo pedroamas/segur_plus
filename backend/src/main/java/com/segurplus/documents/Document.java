@@ -47,6 +47,12 @@ class Document {
     private long sizeBytes;
     @Column(name = "index_status")
     private String indexStatus = "PENDING";
+    @Column(name = "dify_dataset_id")
+    private String difyDatasetId;
+    @Column(name = "dify_document_id")
+    private String difyDocumentId;
+    @Column(name = "indexed_at")
+    private Instant indexedAt;
     @Column(name = "created_by")
     private UUID createdBy;
     @Column(name = "created_at")
@@ -93,6 +99,9 @@ class Document {
     long getSizeBytes() { return sizeBytes; }
     String getIndexStatus() { return indexStatus; }
     Instant getCreatedAt() { return createdAt; }
+    String getDifyDatasetId() { return difyDatasetId; }
+    String getDifyDocumentId() { return difyDocumentId; }
+    Instant getIndexedAt() { return indexedAt; }
     Instant getUpdatedAt() { return updatedAt; }
     Instant getDeletedAt() { return deletedAt; }
 }

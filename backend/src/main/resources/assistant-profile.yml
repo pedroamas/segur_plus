@@ -1,0 +1,21 @@
+# Perfil del asistente por rol (ADR 0003 §3, permissions-matrix «Asistente único y fuentes»).
+# kbs: bases de conocimiento que se consultan (cota superior; manda la re-autorización de cada fragmento).
+# tools: herramientas que el planificador puede proponer (el alcance de datos lo aplica DataScope, no este fichero).
+# unfiltered: sin filtro de metadatos en Dify. ownerFilter: además de allowed_roles, owner_id = usuario.
+segurplus:
+  ai:
+    profiles:
+      MANAGER:
+        kbs: [GENERAL, DIRECCION, FINANZAS, EMPLEADOS]
+        tools: [get_sales_summary, get_commissions, get_policies_by_status, get_targets, search_documents]
+        unfiltered: true
+      ACCOUNTANT:
+        kbs: [GENERAL, FINANZAS]
+        tools: [get_sales_summary, get_commissions, get_policies_by_status, search_documents]
+      SALES_MANAGER:
+        kbs: [GENERAL, DIRECCION, FINANZAS, EMPLEADOS]
+        tools: [get_sales_summary, get_commissions, get_policies_by_status, get_targets, search_documents]
+      EMPLOYEE:
+        kbs: [GENERAL, EMPLEADOS]
+        tools: [get_sales_summary, get_commissions, get_policies_by_status, get_targets, search_documents]
+        ownerFilter: true

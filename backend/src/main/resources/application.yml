@@ -1,4 +1,6 @@
 spring:
+  config:
+    import: classpath:assistant-profile.yml      # perfil del asistente por rol (F4)
   application:
     name: segurplus-backend
   datasource:
@@ -65,3 +67,29 @@ segurplus:
       max-cell-chars: 500
   seed:
     enabled: false              # solo desarrollo: usuarios y documentos de prueba (ver backend/README.md)
+  ai:                           # F4: Dify + Gemini (claves solo en el entorno; nunca versionadas ni registradas)
+    dify:
+      base-url: ${DIFY_BASE_URL:}
+      app-api-key: ${DIFY_APP_API_KEY:}                      # app de generación (modelo principal)
+      app-api-key-fallback: ${DIFY_APP_API_KEY_FALLBACK:}    # app de generación con el modelo de reserva
+      planner-api-key: ${DIFY_PLANNER_API_KEY:}              # app de planificación (sin conocimiento)
+      planner-api-key-fallback: ${DIFY_PLANNER_API_KEY_FALLBACK:}
+      knowledge-api-key: ${DIFY_KNOWLEDGE_API_KEY:}
+      dataset-prefix: "SegurPlus "
+      connect-timeout: 3s                                    # ADR 0003: 3 s / 10 s / 30 s / 120 s
+      first-response-timeout: 10s
+      inactivity-timeout: 30s
+      total-timeout: 120s
+    indexer:
+      enabled: ${AI_INDEXER_ENABLED:true}
+      interval-seconds: 30
+      retry-after-seconds: 300
+      poll-timeout-seconds: 120
+      stuck-after-seconds: 900
+    retrieval:
+      top-k: 5                    # por KB
+      max-context-chunks: 8       # tras re-autorizar
+      score-threshold: 0.0
+    chat:
+      max-message-chars: 2000
+      history-turns: 6

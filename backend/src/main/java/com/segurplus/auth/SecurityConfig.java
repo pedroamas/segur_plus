@@ -45,6 +45,8 @@ class SecurityConfig implements WebMvcConfigurer {
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/auth/logout").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
+                        // el SSE del chat termina con un despacho ASYNC interno (no iniciable desde fuera); la petición original ya se autenticó
+                        .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ASYNC).permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(o -> o.jwt(j -> { })
                         .authenticationEntryPoint((req, res, ex) -> writeProblem(mapper, req, res, HttpStatus.UNAUTHORIZED, ApiException.unauthorized()))

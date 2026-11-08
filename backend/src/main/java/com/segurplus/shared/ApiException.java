@@ -55,4 +55,9 @@ public class ApiException extends RuntimeException {
     public static ApiException payloadTooLarge(String detail) {
         return new ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "payload-too-large", detail);
     }
+
+    /** El motor de IA no está disponible o no está configurado; el detalle es genérico (sin datos internos de Dify). */
+    public static ApiException serviceUnavailable(String detail) {
+        return new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "service-unavailable", detail);
+    }
 }

@@ -29,6 +29,8 @@ class User {
     private Role role;
     private String department;
     private boolean active;
+    @Column(name = "dify_user_ref")
+    private String difyUserRef;
 
     protected User() {
     }
@@ -41,4 +43,7 @@ class User {
     Role getRole() { return role; }
     String getDepartment() { return department; }
     boolean isActive() { return active; }
+    String getDifyUserRef() {
+        return difyUserRef;
+    }
 }

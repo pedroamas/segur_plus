@@ -31,6 +31,7 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -57,9 +58,11 @@ public class DocumentService {
     private final AuditPublisher audit;
     private final Clock clock;
     private final DocumentsProperties props;
+    private final ApplicationEventPublisher events;
 
     DocumentService(DocumentRepository documents, ObjectStorage storage, AccessPolicyService policy, AuditPublisher audit,
-            Clock clock, DocumentsProperties props) {
+            Clock clock, DocumentsProperties props, ApplicationEventPublisher events) {
+        this.events = events;
         this.documents = documents;
         this.storage = storage;
         this.policy = policy;
@@ -156,6 +159,7 @@ public class DocumentService {
             throw ApiException.unprocessable("title is required (max 200 characters).");
         }
         Document saved = store(subject.userId(), meta, roles, type, content);
+        events.publishEvent(new DocumentChanged(saved.getId(), DocumentChanged.Kind.CREATED));
         audit.publish(allowed(AuditAction.DOCUMENT_UPLOAD, subject, saved, "UPLOAD")
                 .withDetails(Map.of("fileType", type.name(), "sizeBytes", saved.getSizeBytes())));
         return toDetail(saved);

@@ -22,4 +22,11 @@ public class CurrentUserService {
                         u.getDepartment()))
                 .orElseThrow(ApiException::unauthorized);
     }
+
+    /** Referencia opaca del usuario hacia Dify ({@code u_<uuid>}, distinta del ID). Aísla historiales; NO autoriza (ADR 0003 §7). */
+    @Transactional(readOnly = true)
+    public String difyUserRef(Subject subject) {
+        return users.findById(subject.userId()).filter(User::isActive).map(User::getDifyUserRef)
+                .orElseThrow(ApiException::unauthorized);
+    }
 }
