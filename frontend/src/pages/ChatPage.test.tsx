@@ -224,13 +224,32 @@ describe('chat: render seguro del contenido del modelo', () => {
     await user.type(box(), 'x{Enter}')
     await screen.findByTestId('usage')
     const text = screen.getAllByTestId('msg-text')[1]
-    expect(text.textContent).toBe(EVIL) // idéntico, sin interpretar
     const log = screen.getByTestId('chat-log')
-    for (const sel of ['script', 'img', 'iframe', 'style', 'a[href^="javascript"]', '[onerror]']) {
-      expect(log.querySelector(sel), sel).toBeNull()
+    // el HTML y el enlace markdown peligrosos aparecen LITERALES como texto
+    for (const lit of ['<img src=x onerror="window.__pwned=1">', '<script>window.__pwned=1</script>', '<a href="javascript:window.__pwned=1">pincha</a>', '[clic](javascript:window.__pwned=1)', '<style>body{display:none}</style>', '<iframe src="https://evil.example"></iframe>']) {
+      expect(text.textContent, lit).toContain(lit)
     }
-    for (const sel of ['strong', 'code', 'h1', 'a']) expect(text.querySelector(sel), sel).toBeNull() // sin markdown ni enlaces dentro del texto
+    for (const sel of ['script', 'img', 'iframe', 'style', 'a', '[onerror]', '[style]', '[href^="javascript"]']) {
+      expect(log.querySelector(`[data-testid="msg-text"] ${sel}, .msg-text ${sel}`), sel).toBeNull() // ningún nodo ejecutable ni enlace dentro del texto del modelo
+    }
+    expect(text.querySelector('strong')?.textContent).toBe('negrita') // el markdown permitido sí se formatea…
+    expect(text.querySelector('code')?.textContent).toBe('code') // …pero solo como elementos de React
     expect((window as unknown as { __pwned?: number }).__pwned).toBeUndefined()
+  })
+
+  it('formatea listas y negrita del modelo sin HTML crudo', async () => {
+    const md = 'Resumen:\n\n* **Pedro:** 105,0 %\n* Laura: 76,0 %\n\n1. uno\n2. dos\n\nFin [D06]'
+    h.postStream.mockResolvedValue(streamOf([CONV, ev('delta', { text: md }), SRC, OK_VERIF, DONE]))
+    const user = userEvent.setup()
+    renderAt()
+    await user.type(box(), 'x{Enter}')
+    await screen.findByTestId('usage')
+    const text = screen.getAllByTestId('msg-text')[1]
+    expect([...text.querySelectorAll('ul > li')].map((l) => l.textContent)).toEqual(['Pedro: 105,0 %', 'Laura: 76,0 %'])
+    expect([...text.querySelectorAll('ol > li')].map((l) => l.textContent)).toEqual(['uno', 'dos'])
+    expect(text.querySelector('strong')?.textContent).toBe('Pedro:')
+    expect(within(text).getByRole('link', { name: '[D06]' })).toHaveAttribute('href', '/documentos/doc-6')
+    expect(text.innerHTML).not.toContain('**')
   })
 
   it('una cita [D99] que el servidor no devolvió como fuente no se convierte en enlace', async () => {

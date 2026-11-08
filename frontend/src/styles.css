@@ -68,7 +68,8 @@ button.secondary { background:transparent; color:var(--accent); border:1px solid
 .msg { max-width:88%; border-radius:10px; padding:.55rem .8rem; border:1px solid var(--line); }
 .msg-user { align-self:flex-end; background:#e6f0fa; border-color:#b9d3ee; }
 .msg-assistant { align-self:flex-start; background:#fff; }
-.msg-text { white-space:pre-wrap; overflow-wrap:anywhere; }
+.msg-text { overflow-wrap:anywhere; white-space:pre-line; } .msg-user .msg-text { white-space:pre-wrap; }
+.msg-text p { margin:.2rem 0 .5rem; } .msg-text ul, .msg-text ol { margin:.2rem 0 .5rem; padding-left:1.3rem; white-space:normal; } .msg-text code { background:#eef2f6; border-radius:4px; padding:0 .25rem; }
 .msg .note, .msg .usage, .msg .verification { margin:.35rem 0 0; font-size:.85rem; }
 .citation { font-weight:700; }
 .sources { margin-top:.4rem; font-size:.9rem; } .sources ul { margin:.15rem 0 0; padding-left:1.1rem; }
