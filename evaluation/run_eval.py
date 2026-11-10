@@ -118,6 +118,7 @@ def main():
     ap.add_argument("--only", default="")
     ap.add_argument("--retries", type=int, default=4)
     ap.add_argument("--out", default="")
+    ap.add_argument("--pause", type=float, default=0, help="segundos de espera entre preguntas (cuota gratuita: 5 peticiones/min por modelo)")
     args = ap.parse_args()
 
     env = read_env(REPO / "deploy" / ".env")
@@ -144,7 +145,9 @@ def main():
         return readable_cache[key]
 
     results, engine_retries, engine_failures = [], 0, 0
-    for q in questions:
+    for qi, q in enumerate(questions):
+        if qi and args.pause:
+            time.sleep(args.pause)
         t0 = time.time()
         attempts = 0
         events, last_status, error = [], None, None
