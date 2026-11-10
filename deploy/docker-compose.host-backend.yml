@@ -1,0 +1,13 @@
+# Superposición para la instancia con el BACKEND COMO PROCESO DEL HOST (java -jar, :8100) y las imágenes originales de F3:
+# Caddy oficial con frontend/dist (npm run build) montado, sin construir ni arrancar el contenedor backend.
+#   (BACKEND_UPSTREAM vale host.docker.internal:8100 por defecto en esta superposición; no hace falta tocar deploy/.env)
+#   docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.host-backend.yml --env-file deploy/.env up -d postgres minio web
+# Nombrar los servicios es imprescindible: sin nombrarlos, `up` arrancaría también el contenedor backend (puerto 8100 ocupado).
+services:
+  web:
+    build: !reset null
+    image: caddy:2-alpine
+    environment:
+      BACKEND_UPSTREAM: ${BACKEND_UPSTREAM:-host.docker.internal:8100}
+    volumes:
+      - ../frontend/dist:/srv:ro

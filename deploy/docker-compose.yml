@@ -1,7 +1,8 @@
-# Infraestructura local de SegurPlus (F1): PostgreSQL 16 + MinIO, y (F3) el contenedor web con Caddy. El backend se ejecuta fuera (java -jar / ./mvnw spring-boot:run).
-# Secretos: deploy/.env (no versionado; plantilla en ../.env.example). Datos: deploy/data/ (en .gitignore).
-# Puertos en 127.0.0.1 (no expuestos a la red): PostgreSQL 5434, MinIO API 9000, consola 9001. El frontend (web) va en la IP de la LAN, 5174.
-name: segurplus
+# Infraestructura y aplicación de SegurPlus: PostgreSQL 16, MinIO, backend, web (Caddy + frontend) y, bajo perfiles, el seed de datos
+# (`seed`) y un Dify SIMULADO (`mockdify`). Dify real NO va aquí: es una instancia aparte (DIFY_BASE_URL; ver deploy/README.md).
+# Secretos y parámetros: .env (plantilla en ../.env.example; usar `--env-file`). Datos: ${DATA_DIR} (por defecto deploy/data/, en .gitignore).
+# Todo es LOCAL: PostgreSQL, MinIO y backend en 127.0.0.1; web SOLO en WEB_BIND_IP (LAN), nunca en 0.0.0.0 ni abierto en el router.
+name: ${COMPOSE_PROJECT_NAME:-segurplus}
 
 services:
   postgres:
@@ -11,9 +12,9 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD en deploy/.env}
       POSTGRES_DB: ${POSTGRES_DB:-segurplus}
     ports:
-      - "127.0.0.1:5434:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5434}:5432"
     volumes:
-      - ./data/postgres:/var/lib/postgresql/data
+      - ${DATA_DIR:-./data}/postgres:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -25,34 +26,109 @@ services:
     # minio/minio ya no se publica en Docker Hub: imagen de Chainguard fijada por digest (misma que usan los tests).
     image: cgr.dev/chainguard/minio@sha256:cee9a8e35885e93f14b3cb32960e5017aff74e2adfb52ba87c65003b0163886b
     command: ["server", "/data", "--console-address", ":9001"]
-    # La imagen corre como uid 65532; se usa el usuario local para poder escribir en el bind mount deploy/data.
+    # La imagen corre como uid 65532; se usa el usuario local para poder escribir en el bind mount ${DATA_DIR}.
     user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:?defina MINIO_ROOT_USER en deploy/.env}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?defina MINIO_ROOT_PASSWORD en deploy/.env}
     ports:
-      - "127.0.0.1:9000:9000"
-      - "127.0.0.1:9001:9001"
+      - "127.0.0.1:${MINIO_API_PORT:-9000}:9000"
+      - "127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001"
     volumes:
-      - ./data/minio:/data
+      - ${DATA_DIR:-./data}/minio:/data
     restart: unless-stopped
 
-  # F3: frontend por HTTPS solo en la LAN (https://192.168.0.28:5174). Caddy sirve frontend/dist (npm run build) y proxifica /api/*
-  # al backend que corre en el host (:8100). Publicado SOLO en WEB_BIND_IP; no abrir este puerto en el router.
+  # Backend Spring Boot (imagen construida desde backend/Dockerfile). La conexión a PostgreSQL y MinIO es la interna de la red del
+  # compose: DB_URL y MINIO_ENDPOINT de .env solo valen para el backend en el host y aquí se ignoran.
+  # No usar a la vez que un backend del host en el mismo BACKEND_PORT.
+  backend:
+    build:
+      context: ../backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-segurplus}
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-segurplus}
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET en .env (openssl rand -base64 48)}
+      APP_CLOCK_FIXED_DATE: ${APP_CLOCK_FIXED_DATE:-2027-01-15}
+      SEGURPLUS_SEED_ENABLED: ${SEGURPLUS_SEED_ENABLED:-true}
+      SEGURPLUS_SEED_DEFAULT_PASSWORD: ${SEGURPLUS_SEED_DEFAULT_PASSWORD:?defina SEGURPLUS_SEED_DEFAULT_PASSWORD en .env}
+      SEGURPLUS_SEED_DOCUMENTS_SPEC_PATH: ""
+      # Dify (instancia aparte; sin /v1). Con el perfil mockdify: DIFY_BASE_URL=http://mockdify:8080 y claves cualesquiera.
+      DIFY_BASE_URL: ${DIFY_BASE_URL:-http://192.168.0.28:8088}
+      DIFY_KNOWLEDGE_API_KEY: ${DIFY_KNOWLEDGE_API_KEY:-}
+      DIFY_APP_API_KEY: ${DIFY_APP_API_KEY:-}
+      DIFY_APP_API_KEY_FALLBACK: ${DIFY_APP_API_KEY_FALLBACK:-}
+      DIFY_PLANNER_API_KEY: ${DIFY_PLANNER_API_KEY:-}
+      DIFY_PLANNER_API_KEY_FALLBACK: ${DIFY_PLANNER_API_KEY_FALLBACK:-}
+      AI_INDEXER_ENABLED: ${AI_INDEXER_ENABLED:-true}
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-8100}:8100"
+    restart: unless-stopped
+
+  # Frontend por HTTPS solo en la LAN (https://<WEB_BIND_IP>:<WEB_PORT>). Imagen construida desde frontend/Dockerfile (Vite + Caddy).
+  # Caddy proxifica /api/* a BACKEND_UPSTREAM (por defecto el servicio backend). Publicado SOLO en WEB_BIND_IP; no abrir en el router.
+  # Instancia con el backend en el host y las imágenes actuales (caddy:2-alpine + frontend/dist montado): docker-compose.host-backend.yml.
   web:
-    image: caddy:2-alpine
+    build:
+      context: ../frontend
     user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
     environment:
       WEB_HOST: ${WEB_BIND_IP:-192.168.0.28}
+      BACKEND_UPSTREAM: ${BACKEND_UPSTREAM:-backend:8100}
       XDG_DATA_HOME: /data
       XDG_CONFIG_HOME: /data/config
     ports:
-      - "${WEB_BIND_IP:-192.168.0.28}:5174:5174"
+      - "${WEB_BIND_IP:-192.168.0.28}:${WEB_PORT:-5174}:5174"
     command: ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - ../frontend/dist:/srv:ro
-      - ./data/caddy:/data          # CA local (se conserva entre reinicios: el navegador solo acepta el aviso una vez)
+      - ${DATA_DIR:-./data}/caddy:/data          # CA local (se conserva entre reinicios: el navegador solo acepta el aviso una vez)
     restart: unless-stopped
+
+  # Seed de datos (UN SOLO USO, perfil `seed`): RESETEA el dataset de negocio y los documentos y vuelve a cargarlos.
+  # NO arranca con `up`: `docker compose --env-file .env --profile seed run --rm seed` (arranca postgres, minio y backend si no lo están).
+  seed:
+    profiles: ["seed"]
+    build:
+      context: ..
+      dockerfile: generator/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_started
+      backend:
+        condition: service_healthy
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-segurplus}
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-segurplus}
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    restart: "no"
+
+  # Dify SIMULADO (perfil `mockdify`): SOLO para pruebas y demos, sin modelo ni embeddings (ver deploy/mock-dify/server.py).
+  # No publica puertos: el backend lo ve en http://mockdify:8080. Estado en un volumen con nombre (se borra con `down -v`).
+  mockdify:
+    profiles: ["mockdify"]
+    build:
+      context: ./mock-dify
+    volumes:
+      - mockdify-state:/state
+    restart: unless-stopped
+
+volumes:
+  mockdify-state:

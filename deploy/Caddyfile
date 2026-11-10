@@ -1,4 +1,6 @@
-# Contenedor web de SegurPlus (F3): sirve frontend/dist por HTTPS y proxifica /api/* al backend del host (mismo origen, sin CORS).
+# Contenedor web de SegurPlus: sirve el frontend por HTTPS y proxifica /api/* al backend (mismo origen, sin CORS).
+# BACKEND_UPSTREAM (variable del contenedor): `backend:8100` en el compose completo (valor por defecto) o
+# `host.docker.internal:8100` si el backend corre como proceso del host (ver deploy/README.md).
 # Solo LAN: el puerto se publica en una IP concreta (WEB_BIND_IP), nunca en 0.0.0.0, y NO debe abrirse en el router.
 {
 	admin off
@@ -27,7 +29,7 @@ https://{$WEB_HOST}:5174 {
 
 	# API: flush_interval -1 envía cada fragmento al instante (preparado para el SSE del chat de F5).
 	handle /api/* {
-		reverse_proxy host.docker.internal:8100 {
+		reverse_proxy {$BACKEND_UPSTREAM:backend:8100} {
 			flush_interval -1
 		}
 	}
