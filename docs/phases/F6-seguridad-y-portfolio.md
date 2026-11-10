@@ -19,3 +19,6 @@
 5. README y ADR suficientes para que otra persona arranque el proyecto sin ayuda.
 
 **Mejoras opcionales (no necesarias):** reranking y búsqueda híbrida, reglas de contexto, RLS de PostgreSQL, antivirus de subida.
+
+## Estado
+Implementada en la rama `f6-seguridad`. Resultados medidos, hallazgos y límites (incluidas las preguntas de la evaluación que **no** se pudieron medir con la cuota gratuita): [`docs/security/f6-resultados.md`](../security/f6-resultados.md). Decisiones: [ADR 0009](../adr/0009-verificacion-de-seguridad-f6.md) y [DECISIONES](../DECISIONES.md#f6--seguridad-y-portfolio-rama-f6-seguridad).

@@ -37,10 +37,16 @@ Reglas simples: dependencias sin ciclos (`ai → documents, data, auth, audit`; 
 
 ## Comandos
 ```
-# infraestructura local (PostgreSQL :5434, MinIO :9000/:9001, web/Caddy 192.168.0.28:5174); secretos en deploy/.env (copiar de .env.example)
+# infraestructura local (PostgreSQL :5434, MinIO :9000/:9001, backend :8100, web/Caddy 192.168.0.28:5174); secretos en deploy/.env (copiar de .env.example, en la raiz)
 mkdir -p deploy/data/postgres deploy/data/minio        # solo la primera vez
 docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d
 docker compose -f deploy/docker-compose.yml --env-file deploy/.env down
+# F6: compose completo (+backend); `seed` (RESETEA datos) y `mockdify` son perfiles. Instancia de Lucas (backend como proceso del host): nombrar los servicios
+docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.host-backend.yml --env-file deploy/.env up -d postgres minio web
+docker compose -f deploy/docker-compose.yml --env-file deploy/.env --profile seed run --rm seed
+scripts/ci-local.sh [paso...]   # = .github/workflows/ci.yml (no se ejecuta, sin GitHub): backend generator frontend compose secrets
+scripts/clone-test.sh           # clone limpio + compose + seed + 7 logins + 1 pregunta por rol (Dify simulado), puertos reservados y desmontaje
+scripts/check-dify.sh           # dependencia de Dify (no forma parte del compose)
 
 # backend (desde backend/; API en :8100, OpenAPI en /swagger-ui.html)
 set -a; . ../deploy/.env; set +a && ./mvnw spring-boot:run
@@ -54,14 +60,15 @@ python -m pytest               # anclas de octubre, cifra documento = BD, determ
 
 # IA (F4): Dify + Gemini (ADR 0003, 0008); credenciales del admin de Dify en ~/.config/segurplus/dify_admin.env (600)
 python3 deploy/dify/provision_dify.py   # idempotente: proveedor, modelos, 4 datasets, 4 apps; escribe las claves en deploy/.env
-python3 evaluation/run_eval.py          # evaluación real contra :8100 (recall@5, citas válidas, fugas; meta: 0 fugas)
+python3 evaluation/run_eval.py          # evaluación real contra :8100 (recall@5, citas válidas, fugas; meta: 0 fugas). Cuota gratuita: --only Q03,... --retries 0 --pause 30 (2 peticiones por pregunta)
+python3 evaluation/injection/run_real.py   # 2 casos reales de prompt injection (≈4 peticiones); borra lo que sube. Corpus completo: PromptInjectionTest (simulado)
 
 # frontend (F3; desde frontend/; detalle en frontend/README.md)
 npm run dev | build | test     # Vite :5174 (proxy /api → :8100), build a dist/, Vitest
 npm run test:e2e               # Playwright (Chrome) contra el stack vivo https://192.168.0.28:5174 (el chat real gasta 2 turnos de Gemini por pasada; para iterar: -g interceptado)
 docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d web   # Caddy: dist por HTTPS solo en la LAN (no abrir el 5174 en el router)
 ```
-Detalle: `backend/README.md` y `generator/README.md`.
+Seguridad F6: `docs/security/f6-resultados.md` (batería de acceso cruzado, inyección, refresh, logs, hallazgos). Detalle: `backend/README.md`, `generator/README.md`, `deploy/README.md`, `scripts/README.md`.
 
 ## Definición de hecho
 Código + tests (unitarios, integración y autorización) + OpenAPI actualizada + ADR si hubo decisión + CI verde.
