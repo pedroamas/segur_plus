@@ -80,7 +80,7 @@ La CI (`.github/workflows/ci.yml`) **no se ejecuta aquí** (no hay GitHub); `scr
 |---|---|
 | Acceso cruzado, 7 usuarios × 32 documentos × REST, listados, RAG, citas, herramientas, descargas, conversaciones ajenas | **1 684 comprobaciones, 0 fallos** |
 | Prompt injection: 12 documentos maliciosos indexados en una prueba aparte + 8 consultas hostiles, planificador y modelo simulados obedientes, 7 usuarios | **140 ejecuciones, 0 con éxito** (+ 2 casos con modelo real: 0) |
-| Refresh: cookie, solo POST+cookie, reutilización ⇒ familia revocada + `TOKEN_REUSE_DETECTED`, logout, JWT alterado/caducado, solo hash | 19 tests, 0 fallos |
+| Refresh: cookie, solo POST+cookie, reutilización ⇒ familia revocada + `TOKEN_REUSE_DETECTED`, logout, JWT alterado/caducado, solo hash | 20 tests (7 de F6 + 13 de F1), 0 fallos |
 | Logs y auditoría sin JWT, prompts ni contenido (recorrido completo + log real) | 0 hallazgos |
 | Backend completo (`./mvnw verify`) | 429 tests, 0 fallos (13 de ArchUnit) |
 | Evaluación real del chat sobre la build final | **solo 10 de 32 preguntas medibles** con la cuota gratuita: recall@5 6/7 (0,857), citas válidas 7/7, fugas 0 |
