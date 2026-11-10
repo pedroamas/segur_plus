@@ -1,0 +1,13 @@
+# Contexto de la RAÍZ (solo lo usa generator/Dockerfile; el backend y el frontend usan su propio contexto).
+.git
+.env
+**/.env
+deploy/data
+backend
+frontend
+evaluation
+generator/out
+generator/.venv
+generator/tests
+**/__pycache__
+**/.pytest_cache
