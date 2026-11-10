@@ -44,11 +44,20 @@ final class PromptBuilder {
             sb.append(documentsSearched ? "(la búsqueda no devolvió ningún fragmento autorizado para este usuario)\n" : "(no se buscó en documentos)\n");
         }
         for (RetrievalService.Chunk c : chunks) {
-            sb.append("<<<FRAGMENTO [").append(c.document().code()).append("] ").append(c.document().title()).append(' ').append(nonce).append(">>>\n")
+            sb.append("<<<FRAGMENTO [").append(c.document().code()).append("] ").append(headerText(c.document().title())).append(' ').append(nonce).append(">>>\n")
                     .append(clip(c.content().replace("<<<", "‹‹‹"), MAX_CHUNK_CHARS)).append("\n<<<FIN ").append(nonce).append(">>>\n");
         }
         sb.append("\nPREGUNTA DEL USUARIO:\n").append(question);
         return sb.toString();
+    }
+
+    /**
+     * El título lo escribe el MANAGER al subir el documento pero acaba en la cabecera de un bloque de datos no confiables: sin
+     * saltos de línea ni «<<<» (no puede falsificar el cierre del bloque ni abrir otro con un código ajeno) y de longitud acotada (F6-01).
+     */
+    static String headerText(String title) {
+        String clean = title == null ? "" : title.replaceAll("[\\p{Cntrl}\\u2028\\u2029\\u202a-\\u202e]", " ").replace("<<<", "‹‹‹").replace(">>>", "›››").strip();
+        return clip(clean, 120);
     }
 
     static String json(ObjectMapper mapper, Object o) {
