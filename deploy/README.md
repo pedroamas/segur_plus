@@ -50,7 +50,7 @@ La instancia de desarrollo mantiene PostgreSQL, MinIO y Caddy en contenedores y 
 ```bash
 docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.host-backend.yml --env-file deploy/.env up -d postgres minio web
 ```
-Hay que nombrar `postgres minio web`: sin nombrarlos, `up` arrancaría también el contenedor `backend` (puerto 8100 ocupado por el del host). La superposición fija `BACKEND_UPSTREAM=host.docker.internal:8100` y monta `frontend/dist` (`cd frontend && npm run build`). El `seed` en esta modalidad se ejecuta con el venv del generador (`generator/README.md`), no con el servicio del compose (que levantaría el contenedor backend).
+Hay que nombrar `postgres minio web`: sin nombrarlos, `up` arrancaría también el contenedor `backend` (puerto 8100 ocupado por el del host). La superposición fija `BACKEND_UPSTREAM=<WEB_BIND_IP>:8100` (el backend del host se lanza con `SERVER_ADDRESS=192.168.0.28`, no escucha en `0.0.0.0`) y monta `frontend/dist` (`cd frontend && npm run build`). El `seed` en esta modalidad se ejecuta con el venv del generador (`generator/README.md`), no con el servicio del compose (que levantaría el contenedor backend).
 
 ## Puertos y variables
 
