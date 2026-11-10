@@ -1,0 +1,57 @@
+# CI de SegurPlus. Cada trabajo ejecuta un paso de scripts/ci-local.sh, de modo que la CI y la ejecución local son LA MISMA
+# (ver scripts/README.md). No ejecuta los E2E de Playwright (el chat real gasta modelo) ni usa secretos: Dify y Gemini no intervienen.
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: backend (mvnw verify: JUnit, ArchUnit, Testcontainers)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - run: scripts/ci-local.sh backend      # Docker ya está disponible en el runner (Testcontainers)
+
+  generator:
+    name: generator (dependencias, importación y recolección de pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: scripts/ci-local.sh generator
+
+  frontend:
+    name: frontend (tsc, build y Vitest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: scripts/ci-local.sh frontend
+
+  compose:
+    name: compose (config -q con un .env de ejemplo)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: scripts/ci-local.sh compose
+
+  secrets:
+    name: escaneo de secretos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: scripts/ci-local.sh secrets
